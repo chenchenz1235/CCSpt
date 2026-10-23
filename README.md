@@ -7,7 +7,7 @@
 | 目标 | 入口 |
 |---|---|
 | 给 AI 安装正式审核 skills | [Skills 安装与目录](skills/README.md) |
-| 试用 EmbedMerge 比较软件 | [EmbedMerge 0.7.0](labs/apps/EmbedMerge/README.md) |
+| 比较两份嵌入式工程，核对代码、CS+ 配置、模型/数据并合并改动 | [EmbedMerge：功能介绍、截图与三分钟体验](labs/apps/EmbedMerge/README.md) |
 | 下载软件包 | [Releases](https://github.com/chenchenz1235/CCSpt/releases) |
 | 找正式软件 | [Apps](apps/README.md) |
 | 找独立脚本 | [Scripts](scripts/README.md) |
