@@ -2,17 +2,28 @@
 
 给嵌入式软件同事使用的工具入口：找工具、下载试用、安装 skills、反馈问题。GitHub 的提交与合并可以由 AI 协助处理。
 
-## 我要做什么
+## 工具目录
 
-| 目标 | 入口 |
-|---|---|
-| 给 AI 安装正式审核 skills | [Skills 安装与目录](skills/README.md) |
-| 比较两份嵌入式工程，核对代码、CS+ 配置、模型/数据并合并改动 | [EmbedMerge：功能介绍、截图与三分钟体验](labs/apps/EmbedMerge/README.md) |
-| 下载软件包 | [Releases](https://github.com/chenchenz1235/CCSpt/releases) |
-| 找正式软件 | [Apps](apps/README.md) |
-| 找独立脚本 | [Scripts](scripts/README.md) |
-| 提供自己的 DIY 工具 | [实验区](labs/README.md) · [提交说明](CONTRIBUTING.md) |
-| 反馈问题或建议 | [新建 Issue](https://github.com/chenchenz1235/CCSpt/issues/new) |
+| 应用软件 | AI Skills | 独立脚本 |
+|---|---|---|
+| 工程比较、合并等桌面工具 | 电机参数审核、温控逻辑核对 | 可单独运行的辅助脚本 |
+| [正式软件](apps/README.md) · [试用软件](labs/apps/) | [浏览与安装 Skills](skills/README.md) | [正式脚本](scripts/README.md) · [试用脚本](labs/scripts/) |
+
+## 应用推荐
+
+### EmbedMerge · 嵌入式工程比较与合并
+
+把两份工程的 C/H 代码、CS+ 配置、Simulink 模型及 MAT/Bus 数据差异放在同一个工作台里核对，支持文本逐块合并，并可结合 Codex 分析改动影响。
+
+**Windows x64 · 试用版 0.7.0**
+
+[查看介绍与截图](labs/apps/EmbedMerge/README.md) · [三分钟体验](labs/apps/EmbedMerge/README.md#三分钟体验一次) · [下载软件](https://github.com/chenchenz1235/CCSpt/releases/tag/embedmerge-v0.7.0)
+
+首次使用建议在“新建比较”中勾选“创建独立副本”。模型与 MAT 数据比较需要本机 MATLAB R2024b；AI 辅助需要安装并登录 Codex CLI。
+
+---
+
+[提交自己的工具](CONTRIBUTING.md) · [反馈问题或建议](https://github.com/chenchenz1235/CCSpt/issues/new) · [全部发布记录](https://github.com/chenchenz1235/CCSpt/releases)
 
 ## 让 AI 安装 skills
 
