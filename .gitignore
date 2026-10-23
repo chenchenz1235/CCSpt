@@ -1,0 +1,9 @@
+*.zip
+*.exe
+*.msi
+*.7z
+data/
+node_modules/
+.env
+auth.json
+__pycache__/

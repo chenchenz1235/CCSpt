@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "default_install": [
+    "ccspt-code-review",
+    "ccspt-motor-parameter-review",
+    "ccspt-thermostat-logic"
+  ],
+  "skills": [
+    {
+      "name": "ccspt-code-review",
+      "description": "审核工具集总入口",
+      "status": "stable",
+      "version": "0.1.0",
+      "repo": "chenchenz1235/ccspt-code-review-skill",
+      "ref": "7d2c1444d2bd976312fcd5cef2ae956653bc7925",
+      "path": "plugins/ccspt-code-review-skill/skills/ccspt-code-review",
+      "dependencies": [
+        "ccspt-motor-parameter-review",
+        "ccspt-thermostat-logic"
+      ]
+    },
+    {
+      "name": "ccspt-motor-parameter-review",
+      "description": "电机参数及派生计算审核",
+      "status": "stable",
+      "version": "0.3.0",
+      "repo": "chenchenz1235/ccspt-code-review-skill",
+      "ref": "7d2c1444d2bd976312fcd5cef2ae956653bc7925",
+      "path": "plugins/ccspt-code-review-skill/skills/ccspt-motor-parameter-review",
+      "dependencies": []
+    },
+    {
+      "name": "ccspt-thermostat-logic",
+      "description": "温控文档、需求核对、实现自检",
+      "status": "stable",
+      "version": "0.2.0",
+      "repo": "chenchenz1235/ccspt-code-review-skill",
+      "ref": "7d2c1444d2bd976312fcd5cef2ae956653bc7925",
+      "path": "plugins/ccspt-code-review-skill/skills/ccspt-thermostat-logic",
+      "dependencies": []
+    }
+  ]
+}

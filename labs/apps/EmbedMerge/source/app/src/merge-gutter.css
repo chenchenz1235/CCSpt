@@ -1,0 +1,12 @@
+#editor{position:relative}
+#mergeGutter{position:absolute;top:0;bottom:0;width:54px;z-index:12;pointer-events:none;background:rgba(238,242,247,.86);border-left:1px solid #ccd7e5;border-right:1px solid #ccd7e5;overflow:hidden}
+.gutter-hunk{position:absolute;left:1px;right:1px;border-left:3px solid #bd8234;background:rgba(255,225,168,.45);min-height:26px;display:flex;align-items:center;justify-content:center}
+.gutter-hunk[data-kind=added]{border-color:#40996b;background:rgba(163,220,181,.45)}
+.gutter-hunk[data-kind=removed]{border-color:#c96d6d;background:rgba(241,180,180,.45)}
+.gutter-hunk.current{outline:1px solid #7197c7;outline-offset:-1px}
+.gutter-controls{display:flex;gap:1px;pointer-events:auto}
+.gutter-controls button{border:1px solid #b9c9dc;background:#fffef9;color:#365879;font-size:16px;line-height:20px;padding:1px 3px;min-width:23px;border-radius:3px;font-weight:600}
+.gutter-controls button:hover{background:#dceaff;border-color:#638fca}
+.text-diff-legend{display:flex;gap:8px;font-size:11px;white-space:nowrap}.text-diff-legend>span{padding:3px 6px;border-radius:3px}.text-diff-legend .added{background:#e2f4e8;color:#236342}.text-diff-legend .removed{background:#fbe6e6;color:#a14343}.text-diff-legend .changed{background:#fff0d5;color:#8a5a15}
+#saveCurrent{color:#225aa0;border-color:#a6bfdc}#saveCurrent:disabled{opacity:.55}#closeFile{font-size:19px;padding:1px 10px}
+#saveChangesDialog{max-width:620px}#saveChangesDialog p{overflow-wrap:anywhere;line-height:1.7}

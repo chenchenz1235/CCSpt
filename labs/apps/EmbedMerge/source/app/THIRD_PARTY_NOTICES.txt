@@ -1,0 +1,23 @@
+EmbedMerge runtime components
+
+Electron 45.0.0 — MIT; Chromium/Node/V8 and other licenses in LICENSE and LICENSES.chromium.html beside EmbedMerge.exe.
+Monaco Editor 0.57.0 — MIT. Copyright Microsoft Corporation.
+jsdiff (diff) 9.0.0 — BSD-3-Clause. Copyright Kevin Decker and contributors.
+iconv-lite 0.7.3 — MIT. Copyright Alexander Shtuchkin and contributors.
+safer-buffer — MIT. Runtime transitive dependency of iconv-lite.
+@xmldom/xmldom 0.9.12 — MIT. Used for local CS+ XML configuration parsing.
+
+Development tools: Vite 8.3.5 (MIT), Playwright (Apache-2.0), @electron/asar 4.3.1 (MIT).
+Exact dependency versions and integrity hashes: package-lock.json.
+Runtime dependency license texts are retained within resources/app.asar node_modules.
+Monaco LICENSE and ThirdPartyNotices.txt are also distributed under resources/licenses.
+
+Optional external software
+  Codex CLI/App Server is separately installed and authenticated by each user; not included or redistributed here.
+  MATLAB/Simulink R2024b requires the company's own licensed installation; not included.
+
+Reused project asset
+  matlab/acw_compare.m copied from new-project-kit/matlab/acw_compare.m as the official comparison adapter.
+  scripts/package.mjs adapts buffer-length ASAR construction from new-project-kit/reference/packaging/finalize-package.cjs.
+  Other core workspace, UI, agent broker and MAT traversal modules are newly implemented.
+  Original toolkit, historical tools and engineering files remain in place.

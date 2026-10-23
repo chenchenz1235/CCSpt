@@ -1,0 +1,9 @@
+人工合成样例，供双树、颜色分类、逐块合并和 Codex 按需读取验证使用。
+
+ref/src/protocol.c 与 test/src/protocol.c：有实际路由函数调用差异。
+ref/include/product_config.h 与 test/include/product_config.h：模拟板卡和电机功率差异。
+src/comment_only.c：只有注释日期差异；token 层应相同，原始文本仍应可查看。
+ref/src/ref_only.c：仅左侧存在。
+test/src/test_only.c：仅右侧存在。
+
+这是示意代码，不是可编译或可上板的完整工程。不要据此定义真实协议。

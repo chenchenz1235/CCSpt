@@ -1,0 +1,3 @@
+#define SCI_CHANNELS 2
+#define MOTOR_POWER_W 2000
+#define BOARD_REV 4

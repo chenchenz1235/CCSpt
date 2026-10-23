@@ -1,0 +1,47 @@
+# EmbedMerge — 嵌入式工程比较工作台
+
+状态：**0.7.0 试用版，Windows x64**。维护人：[@chenchenz1235](https://github.com/chenchenz1235)。
+
+用于比较文件与工程目录、审阅和合并差异，并按需调用本机 MATLAB 或 Codex。当前先供同事体验，尚未移入正式 apps 区。
+
+## 下载与运行
+
+- [下载 EmbedMerge 0.7.0 ZIP](https://github.com/chenchenz1235/CCSpt/releases/download/embedmerge-v0.7.0/EmbedMerge-0.7.0-windows-x64.zip)，约 157.5 MiB。
+- [校验文件 SHA256SUMS.txt](https://github.com/chenchenz1235/CCSpt/releases/download/embedmerge-v0.7.0/SHA256SUMS.txt)。
+- [发布记录与验证范围](https://github.com/chenchenz1235/CCSpt/releases/tag/embedmerge-v0.7.0)。
+
+将整个压缩包解压到可写的固定目录，例如 `D:\Tools\EmbedMerge`，双击 `EmbedMerge.exe`。无需让员工使用开发者的项目目录，也不要只拿 EXE 单文件。不要放在只读目录或直接从压缩包启动。
+
+**首次请用工程副本试用。0.7.0 默认直接操作所选原文件；保存、复制、覆盖和删除都可能改动文件。** 新建比较时可勾选“创建独立副本”。程序有备份与撤回设计，但本次未重测这些运行行为，不能将其作为无需检查操作结果的保证。
+
+## 功能与依赖
+
+| 功能 | 依赖及范围 |
+|---|---|
+| 文本、文件和目录比较 | 压缩包自带运行时；本次未验证所有 Windows 版本 |
+| MATLAB 模型/MAT 比较 | 员工本机需要 MATLAB R2024b，代码严格检查版本；填写 matlab.exe 路径；不需要额外 MATLAB MCP |
+| AI 辅助 | 目前仅支持 Codex，需本机 Codex CLI 与个人登录；未接入其他 AI 服务，不提供共享凭据 |
+
+MATLAB 通过本机进程及 AutomationServer 连接，应用内 Codex 禁用了外部 MCP；安装 MATLAB MCP 不能替代 MATLAB R2024b。本次已核对连接代码与发布文件一致。
+
+`data/` 在员工电脑运行时自行生成，包含个人任务、备份及日志；升级前保留自己的数据。此发布包已排除开发者的整个 data 目录。随包的“快速开始.txt”针对当前版本；“使用说明.txt”保留历史功能记录，旧版条款与 0.7.0 有冲突时以当前版本为准。
+
+## 本次发布检查
+
+- 包内版本：0.7.0；EXE 架构：Windows x64。
+- 315 条原构建清单逐项核对文件长度及 SHA-256。
+- 发布压缩包共 318 个文件，逐项回读核对 SHA-256，未包含 data/。
+- 排除了开发者的任务、日志及缓存；做了常见凭据文件名和密钥格式筛查。这不是完整的安全审计。
+- 本次未重跑软件 GUI、模型仿真、AI 端到端调用或实机验证；历史验收记录不能替代本次验证。
+
+压缩包 SHA-256：`b58f8d8845f23bbf38b22bc01df2e2c2a036d03d3018cf67e8efb92e11833643`。
+
+## 问题反馈
+
+[提交问题](https://github.com/chenchenz1235/CCSpt/issues/new)，附软件版本、操作步骤、预期与实际结果；可用脱敏截图或最小样例。公开反馈不要附公司工程、客户资料、个人任务目录或凭据。
+
+本次分发成品包，不导入整个开发工程。Electron 软件包内仍含运行所需脚本与资源，不应将它视为保密封装。随包第三方许可证与声明保留；EmbedMerge 本身尚未另行声明开源许可证。
+
+## 开发源码与 DIY
+
+[浏览开发源码与构建说明](source/README.md)。保留 app 与 new-project-kit/fixtures 的相邻结构；在 app 中安装依赖、运行测试及构建。公开副本包含合成样例，未包含实际公司工程。当前副本前端构建通过，59 项单元测试通过、2 项跳过；GUI、真实 MATLAB/Codex 与重新打包未在本次验证。
