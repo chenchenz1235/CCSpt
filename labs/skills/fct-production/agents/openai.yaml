@@ -1,0 +1,4 @@
+interface:
+  display_name: "产线工装编制"
+  short_description: "分步确认项目与方案，沿用模板输出FCT资料及软件指导，软件审核可选"
+  default_prompt: "使用 $fct-production，按项目总览确认、测试方案确认、正式资料输出三个步骤推进，沿用现有模板；软件修改后审核按需开展。"
