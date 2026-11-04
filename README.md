@@ -45,6 +45,12 @@
 
 此技能位于试用区，不加入正式 skills 的默认安装集合；具体工程的判限及软件修改需确认，实机验证由项目完成。
 
+## AI 使用实践
+
+[让 AI 连接你正在使用的 Edge](docs/guides/playwright-mcp-edge.md)：Playwright MCP 配置、标签页授权与实际踩坑。把下面这段交给支持本地 MCP 的 AI：
+
+> 请读取 https://github.com/chenchenz1235/CCSpt/blob/main/docs/guides/playwright-mcp-edge.md ，帮我配置 Edge 连接并完成首次只读体验，按指南处理已有配置、备份和人工授权。
+
 ## 目录与状态
 
 ```text
