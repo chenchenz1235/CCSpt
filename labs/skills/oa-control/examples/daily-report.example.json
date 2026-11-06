@@ -1,0 +1,11 @@
+{
+  "date": "2026-01-01",
+  "today": [
+    {"projectCode":"XM-EXAMPLE-001","projectName":"示例项目A","hours":6,"description":"完成软件界面调整，初步实现新旧协议兼容；剩余缺陷待修复。"},
+    {"projectCode":"XM-EXAMPLE-002","projectName":"示例项目B","hours":2,"description":"开展运行稳定性调试。"}
+  ],
+  "tomorrow": [
+    {"projectName":"示例项目A","description":"在实际测试中体验新版上位机。"},
+    {"projectName":"示例项目B","description":"完成运行稳定性测试。"}
+  ]
+}

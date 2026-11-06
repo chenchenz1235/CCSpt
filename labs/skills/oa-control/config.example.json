@@ -1,0 +1,8 @@
+{
+  "oaUrl": "https://oa.example.com/seeyon/main.do?method=main",
+  "cdpEndpoint": "http://127.0.0.1:9222",
+  "edgePath": "",
+  "profileDir": ".edge-profile",
+  "outputDir": ".state",
+  "dailyReportUrl": ""
+}

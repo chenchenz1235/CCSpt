@@ -1,0 +1,10 @@
+{
+  "name": "ccspt-oa-control",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"test": "node --test tests/config.test.mjs tests/cdp.test.mjs", "oa": "node scripts/oa.mjs"},
+  "engines": {"node": ">=20"},
+  "dependencies": {"playwright-core": "1.65.0"}
+}
+

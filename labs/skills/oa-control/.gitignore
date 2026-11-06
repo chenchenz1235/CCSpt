@@ -1,0 +1,10 @@
+node_modules/
+config.local.json
+.edge-profile/
+.private/
+.state/
+captures/
+*.log
+.env*
+*-credential.xml
+.test-*/
