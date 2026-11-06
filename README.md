@@ -47,9 +47,13 @@
 
 ## AI 使用实践
 
-[让 AI 连接你正在使用的 Edge](docs/guides/playwright-mcp-edge.md)：Playwright MCP 配置、标签页授权与实际踩坑。把下面这段交给支持本地 MCP 的 AI：
+[用脚本直连 Edge，让 AI 操作 OA](docs/guides/playwright-cdp-edge.md)：Playwright/CDP 专用 Edge 连接，替代原 MCP 默认方式。
 
-> 请读取 https://github.com/chenchenz1235/CCSpt/blob/main/docs/guides/playwright-mcp-edge.md ，帮我配置 Edge 连接并完成首次只读体验，按指南处理已有配置、备份和人工授权。
+[oa-control · OA 操作助手](labs/skills/oa-control/README.md)（试用）：通用查询、流程排查、研发日报填写；登录和正式发送前确认，项目多匹配时请用户选择，其他表单按验证逐步积累。
+
+> 请读取 https://github.com/chenchenz1235/CCSpt/blob/main/docs/guides/playwright-cdp-edge.md ，帮我安装 OA Skill 和脚本，配置我的 OA 地址，使用 Edge 完成首次只读体验。
+
+默认人工登录；需要离开电脑完成登录的人可自行参考可选的本机加密方法，不作为默认或推荐方式，启用与风险由使用者评估。
 
 ## 目录与状态
 
@@ -67,3 +71,4 @@ CCSpt/
 `labs` 中的工具尚在试用，说明中列出验证范围与已知限制；正式区要求明确的用途、维护人、使用说明及必要验证。成熟工具发布到相应正式项目后，在导航中更新状态和链接，不复制多份源码。
 
 本仓库公开可见。当前发布 EmbedMerge 试用软件包及导航文档，另有整理后的 EmbedMerge 开发源码供 DIY，没有导入个人任务数据、员工工程或整个原开发目录。软件包可能包含运行所需的脚本和资源，并非对源代码的保密封装。各工具的许可分别说明；公开可下载不等于已授予开源许可。
+
