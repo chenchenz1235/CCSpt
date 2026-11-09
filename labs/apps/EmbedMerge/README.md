@@ -2,9 +2,9 @@
 
 **把两份工程的代码、CS+ 配置和 MATLAB 模型/数据差异放在同一个工作台里查看，再决定哪些改动保留、哪些需要合并。**
 
-面向需要做版本归档、项目移植、参数复核和改动交接的嵌入式软件同事。当前为 **0.7.0 Windows x64 试用版**，维护人：[@chenchenz1235](https://github.com/chenchenz1235)。
+面向需要做版本归档、项目移植、参数复核和改动交接的嵌入式软件同事。当前为 **0.11.5 Windows x64 试用版**，维护人：[@chenchenz1235](https://github.com/chenchenz1235)。
 
-[下载体验](https://github.com/chenchenz1235/CCSpt/releases/tag/embedmerge-v0.7.0) · [三分钟看懂](#三分钟体验一次) · [源码与 DIY](source/README.md) · [反馈问题](https://github.com/chenchenz1235/CCSpt/issues/new)
+[下载体验](https://github.com/chenchenz1235/CCSpt/releases/tag/embedmerge-v0.11.5) · [三分钟看懂](#三分钟体验一次) · [源码与 DIY](source/README.md) · [反馈问题](https://github.com/chenchenz1235/CCSpt/issues/new)
 
 ## 它解决什么问题
 
@@ -30,12 +30,12 @@
 **第一轮不需要 MATLAB，也不需要登录 Codex。** 先用随包合成样例了解目录和文本比较：
 
 1. 下载并完整解压 ZIP，运行 `EmbedMerge.exe`。
-2. 点“新建比较”，左侧选 `resources/fixtures/ref`，右侧选 `resources/fixtures/test`；勾选“创建独立副本”。
-3. 打开 `src/protocol.c`：看路由函数调用的差异；再看 `include/product_config.h` 中模拟的配置变化。
+2. 在首页点“打开 fixtures 示例”，程序会准备随包合成样例；无需查找磁盘路径。
+3. 示例加载完成后打开 `src/protocol.c`：看路由函数调用的差异；再看 `include/product_config.h` 中模拟的配置变化。
 4. 对照只在一侧存在的文件，以及 `src/comment_only.c` 的注释变化，看看哪些是你真正关心的改动。
 5. 在副本里尝试向左/右合并一处差异、保存，再查看备份或撤回操作。
 
-完成后再拿一个**脱敏工程副本**试试。想体验模型/MAT 比较时配置 MATLAB R2024b；想体验 AI 分析时安装并登录本机 Codex CLI。
+完成后再拿一个**脱敏工程副本**试试。模型/MAT 比较需配置本机 MATLAB；AI 可选择本机 Codex 或 Claude Code CLI，使用个人登录。
 
 ## 为什么值得同事试用
 
@@ -49,42 +49,55 @@
 
 ## 下载与运行
 
-- [下载 EmbedMerge 0.7.0 ZIP](https://github.com/chenchenz1235/CCSpt/releases/download/embedmerge-v0.7.0/EmbedMerge-0.7.0-windows-x64.zip)，约 157.5 MiB。
-- [校验文件 SHA256SUMS.txt](https://github.com/chenchenz1235/CCSpt/releases/download/embedmerge-v0.7.0/SHA256SUMS.txt)。
-- [发布记录与验证范围](https://github.com/chenchenz1235/CCSpt/releases/tag/embedmerge-v0.7.0)。
+- [下载 EmbedMerge 0.11.5 ZIP](https://github.com/chenchenz1235/CCSpt/releases/download/embedmerge-v0.11.5/EmbedMerge-0.11.5-windows-x64.zip)，约 155.5 MiB。
+- [校验文件 SHA256SUMS.txt](https://github.com/chenchenz1235/CCSpt/releases/download/embedmerge-v0.11.5/SHA256SUMS.txt)。
+- [发布记录与验证范围](https://github.com/chenchenz1235/CCSpt/releases/tag/embedmerge-v0.11.5)。
 
 将整个压缩包解压到可写的固定目录，例如 `D:\Tools\EmbedMerge`，双击 `EmbedMerge.exe`。无需让员工使用开发者的项目目录，也不要只拿 EXE 单文件。不要放在只读目录或直接从压缩包启动。
 
-**首次请用工程副本试用。0.7.0 默认直接操作所选原文件；保存、复制、覆盖和删除都可能改动文件。** 新建比较时可勾选“创建独立副本”。程序有备份与撤回设计，但本次未重测这些运行行为，不能将其作为无需检查操作结果的保证。
+**首次请用工程副本试用。直接比较会操作所选原文件；保存、复制、覆盖和删除都可能改动文件。** 新建比较时可勾选“创建独立副本”。程序有备份与撤回设计，但本次未重测这些运行行为，不能将其作为无需检查操作结果的保证。
 
 ## 功能与依赖
 
 | 功能 | 依赖及范围 |
 |---|---|
 | 文本、文件和目录比较 | 压缩包自带运行时；本次未验证所有 Windows 版本 |
-| MATLAB 模型/MAT 比较 | 员工本机需要 MATLAB R2024b，代码严格检查版本；填写 matlab.exe 路径；不需要额外 MATLAB MCP |
-| AI 辅助 | 目前仅支持 Codex，需本机 Codex CLI 与个人登录；未接入其他 AI 服务，不提供共享凭据 |
+| MATLAB 模型/MAT 比较 | 本机安装 MATLAB，顶部“MATLAB 设置”中配置 matlab.exe；不按年份设置白名单，实际操作依赖函数、工具箱及许可证；不需要额外 MATLAB MCP |
+| AI 辅助 | 本机 Codex 或 Claude Code CLI 与个人登录；原生工具、技能和 MCP 取决于本机配置；专用参数审核仍使用 Codex |
 
-MATLAB 通过本机进程及 AutomationServer 连接，应用内 Codex 禁用了外部 MCP；安装 MATLAB MCP 不能替代 MATLAB R2024b。本次已核对连接代码与发布文件一致。
+MATLAB 通过本机进程及 AutomationServer 连接。Codex 保留项目沙箱和 on-request 确认；Claude 使用默认权限规则及软件内确认。AI 可配置软件设置并打开页面；原生文件工具可能直接写工作目录。
 
-`data/` 在员工电脑运行时自行生成，包含个人任务、备份及日志；升级前保留自己的数据。此发布包已排除开发者的整个 data 目录。随包的“快速开始.txt”针对当前版本；“使用说明.txt”保留历史功能记录，旧版条款与 0.7.0 有冲突时以当前版本为准。
+`data/` 在员工电脑运行时自行生成，包含个人任务、备份及日志；升级前保留自己的数据。此发布包已排除开发者的整个 data 目录。包内《打包与AI接入说明.txt》说明本版设置入口、配置文件、权限和验证边界；《使用说明.txt》保留历史功能记录，冲突时以当前说明为准。
 
-## 本次发布检查
+## 0.11.5 更新与验证
 
-- 包内版本：0.7.0；EXE 架构：Windows x64。
-- 315 条原构建清单逐项核对文件长度及 SHA-256。
-- 发布压缩包共 318 个文件，逐项回读核对 SHA-256，未包含 data/。
-- 排除了开发者的任务、日志及缓存；做了常见凭据文件名和密钥格式筛查。这不是完整的安全审计。
-- 本次未重跑软件 GUI、模型仿真、AI 端到端调用或实机验证；历史验收记录不能替代本次验证。
+供同事试用的 Windows x64 版本。完整解压 ZIP 后运行 EmbedMerge.exe，首次请使用工程副本；升级前保留旧版本旁的个人 data/。
 
-压缩包 SHA-256：`b58f8d8845f23bbf38b22bc01df2e2c2a036d03d3018cf67e8efb92e11833643`。
+本版主要修复：
+
+- 两侧路径先加载、可直接修改，点击“开始比较”后执行；修复文件夹双击打不开、无效路径误选旧目录等操作问题。
+- 关闭文件、返回目录、只读问答不再触发整目录重扫；保存仅更新当前文件，直接文件比较支持外部更新刷新并保护草稿。
+- 无工程时也能打开 MATLAB 设置、手填或由 AI 查找配置路径。取消年份白名单，允许 R2024a 等版本，实际比较仍依赖本机 MATLAB、所需工具箱和许可证。
+- 软件内 Codex / Claude Code 支持填入设置、路径和打开对应页面。放宽工作预算，保留原生工具、技能及本机配置的 MCP。
+- Claude Code 改用默认权限规则，待确认操作可在软件内允许/拒绝，支持补充问题。未启用跳过权限检查；专用参数审核按钮仍使用 Codex。
+
+验证：开发副本单元测试 140 项，139 通过、1 项因文件系统不支持硬链接跳过；打包 EXE 的常规操作 14 项、Claude 界面 7 项和权限模拟 7 项通过。公开源码另行运行测试及构建，结果见源码 README。
+
+已知验证边界：AI 权限链路使用脚本模拟 CLI，经过真实 EXE、认证 MCP 和界面，不代表真实模型推理已通过。真实 Claude CLI 2.1.293 在隔离测试中退出但无输出、未请求本地模拟接口，独立调用也复现；真实账号端到端文件操作尚未验证通过。MATLAB 多版本配置和启动路由经过模拟，未逐版本运行实际模型比较。详见包内《打包与AI接入说明.txt》。
+
+普通文本比较不需要安装 AI 或 MATLAB；相关功能使用接收方本机工具及个人登录。原生 AI 文件工具可以直接写工作目录，请用工程副本试用。发布包排除个人任务、data、凭据、日志和私有固件运行配置。
+
+附件：EmbedMerge-0.11.5-windows-x64.zip 与 SHA256SUMS.txt。源码固定在 embedmerge-v0.11.5 标签下的 labs/apps/EmbedMerge/source。
+
+- 发布 ZIP 的 88 个条目已逐项回读核对清单长度和 SHA-256；不附带私有固件配置。
+- ZIP SHA-256：`0a587b0f007dd887247c57cf452bdd23306541ddba38134730b4399b2d941279`。
 
 ## 问题反馈
 
 [提交问题](https://github.com/chenchenz1235/CCSpt/issues/new)，附软件版本、操作步骤、预期与实际结果；可用脱敏截图或最小样例。公开反馈不要附公司工程、客户资料、个人任务目录或凭据。
 
-本次分发成品包，不导入整个开发工程。Electron 软件包内仍含运行所需脚本与资源，不应将它视为保密封装。随包第三方许可证与声明保留；EmbedMerge 本身尚未另行声明开源许可证。
+本次提供成品包与经过筛选的源码，排除整个开发目录及其个人数据。Electron 软件包内仍含运行所需脚本与资源，不应将它视为保密封装。随包第三方许可证与声明保留；EmbedMerge 本身尚未另行声明开源许可证。
 
 ## 开发源码与 DIY
 
-[浏览开发源码与构建说明](source/README.md)。保留 app 与 new-project-kit/fixtures 的相邻结构；在 app 中安装依赖、运行测试及构建。公开副本包含合成样例，未包含实际公司工程。当前副本前端构建通过，59 项单元测试通过、2 项跳过；GUI、真实 MATLAB/Codex 与重新打包未在本次验证。
+[浏览开发源码与构建说明](source/README.md)。保留 app 与 new-project-kit/fixtures 的相邻结构；在 app 中安装依赖、运行测试及构建。公开副本包含合成样例，未包含实际公司工程。公开副本测试和构建结果见 [源码说明](source/README.md)，真实调用边界见上文。

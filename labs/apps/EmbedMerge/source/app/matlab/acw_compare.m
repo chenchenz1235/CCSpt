@@ -19,7 +19,7 @@ try
         % unfiltered export before interpreting an empty visible difference tree.
         c=visdiff(left,right);filter(c,'unfiltered');
         folder=tempname(pwd);mkdir(folder);
-        result.unfilteredReport=char(publish(c,OutputFolder=folder));
+        result.unfilteredReport=char(publish(c,'OutputFolder',folder));
         result.reportFilter='unfiltered';
     end
     result.status='compared';

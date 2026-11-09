@@ -7,25 +7,26 @@ import {decode,encode,hash} from './text.mjs';
 import iconv from 'iconv-lite';
 import {isMatlabFile,isMatlabCache} from './matlab-status.mjs';
 import {supplementModelResult} from './model-report.mjs';
+import {MatlabSettings,matlabIdentity} from './matlab-settings.mjs';
 import {MatlabViewerSession} from './matlab-viewer.mjs';
 export const quoteM=s=>"'"+String(s).replaceAll("'","''")+"'";
 const ENGINE_VERSION=4;
 export class MatlabBackend {
-  constructor(workspace,notify,appRoot,options={}){this.workspace=workspace;this.notify=notify;this.appRoot=appRoot;this.spawn=options.spawn||spawn;this.generation=0;}
-  async executable(configured){if(configured){if(path.basename(configured).toLowerCase()!=='matlab.exe')throw Error('请选择 MATLAB 的 matlab.exe');await fs.access(configured);return configured;}for(const p of ['D:/App/matlab/R2024b/bin/matlab.exe','C:/Program Files/MATLAB/R2024b/bin/matlab.exe']){try{await fs.access(p);return p;}catch{}}throw Error('未找到 MATLAB R2024b，请填写 matlab.exe 路径');}
+  constructor(workspace,notify,appRoot,options={}){this.workspace=workspace;this.notify=notify;this.appRoot=appRoot;this.spawn=options.spawn||spawn;this.generation=0;this.settings=options.settings||new MatlabSettings(workspace.dataRoot||workspace.taskRoot,notify);}
+  async executable(configured){return this.settings.resolve(configured); }
   async run(code,options={}){
     if(this.running)throw Error('MATLAB 正在运行另一个任务');if(!this.workspace.task)throw Error('请先打开任务');
     this.running=true;const generation=++this.generation;
     try{return await this.runJob(code,options,generation);}finally{this.running=false;}
   }
   async runJob(code,{exe,showUI=false,timeoutMs=300000,onPartial}={},generation){
-    exe=await this.executable(exe);const job=path.join(this.workspace.taskRoot,'artifacts','matlab-'+randomUUID());await fs.mkdir(job,{recursive:true});
+    exe=await this.executable(exe);const identity=await matlabIdentity(exe);const job=path.join(this.workspace.taskRoot,'artifacts','matlab-'+randomUUID());await fs.mkdir(job,{recursive:true});
     const output=path.join(job,'result.json'),script=path.join(job,'job.m');
     const transcript=path.join(job,'matlab-output.log');let logQueue=Promise.resolve();const appendLog=text=>{logQueue=logQueue.then(()=>fs.appendFile(transcript,text,'utf8')).catch(()=>{});};
-    const source=`try\naddpath(${quoteM(path.join(this.appRoot,'matlab'))});\nassert(strcmp(version('-release'),'2024b'),'This adapter requires MATLAB R2024b');\n${code}\nr.release=version('-release');r.compile='not_run';r.simulation='not_run';\ncatch err\nr=struct('status','failed','error',getReport(err,'extended','hyperlinks','off'));\nend\nfid=fopen(${quoteM(output)},'w','n','UTF-8');assert(fid>0);fprintf(fid,'%s',jsonencode(r));fclose(fid);\n`;
+    const source=`try\naddpath(${quoteM(path.join(this.appRoot,'matlab'))});\n${code}\nr.release=version('-release');r.compile='not_run';r.simulation='not_run';\ncatch err\nr=struct('status','failed','error',getReport(err,'extended','hyperlinks','off'));\nend\nfid=fopen(${quoteM(output)},'w','n','UTF-8');assert(fid>0);fprintf(fid,'%s',jsonencode(r));fclose(fid);\n`;
     await fs.writeFile(script,source,'utf8');
-    const args=showUI?['-nosplash','-sd',job,'-r',`run(${quoteM(script)});`]:['-wait','-nosplash','-sd',job,'-batch',`run(${quoteM(script)});`];
-    const prefdir=path.join(job,'prefs-R2024b');await fs.mkdir(prefdir,{recursive:true});
+    const args=showUI?['-nosplash','-sd',job,'-r',`run(${quoteM(script)});`]:identity.batchAvailable?['-wait','-nosplash','-sd',job,'-batch',`run(${quoteM(script)});`]:['-wait','-nosplash','-sd',job,'-r',`try,run(${quoteM(script)});catch err,disp(getReport(err,'extended'));end;exit;`];
+    const prefdir=path.join(job,'prefs-'+(identity.release||'matlab'));await fs.mkdir(prefdir,{recursive:true});
     if(generation!==this.generation)throw Error('MATLAB 启动已取消');
     const child=this.spawn(exe,args,{windowsHide:!showUI,env:{...process.env,MATLAB_PREFDIR:prefdir},stdio:['ignore','pipe','pipe']});this.child=child;
     let finished=false,timer,poll,partialTimer,childExited=false,partialQueue=Promise.resolve();const delivered=new Set();
@@ -62,11 +63,11 @@ export class MatlabBackend {
   }
   async compareAll(){
     if(this.running)throw Error('MATLAB 正在执行另一个任务');const w=this.workspace,task=w.task;if(!task)return;const generation=this.generation,candidates=(w.inventory||[]).filter(n=>n.kind==='file'&&n.matlab&&n.ref&&n.test&&isMatlabFile(n.rel)&&(!isMatlabCache(n.rel)||task.fileFilters?.caches===false));if(!candidates.length)return;
-    const items=[];for(const n of candidates){if(generation!==this.generation)throw Error('MATLAB 比较准备已取消');if(/\.m$/i.test(n.rel))continue;const versions=await this.versions(n.rel);if(this.cached(n.rel,versions))continue;if(versions[0]===versions[1]){task.modelResults[n.rel]={status:'compared',changes:[],engineVersion:ENGINE_VERSION,versions,source:'本地文件字节核对',release:'2024b',compile:'not_run',simulation:'not_run'};continue;}items.push(await this.prepare(n.rel));}
+    const items=[];for(const n of candidates){if(generation!==this.generation)throw Error('MATLAB 比较准备已取消');if(/\.m$/i.test(n.rel))continue;const versions=await this.versions(n.rel);if(this.cached(n.rel,versions))continue;if(versions[0]===versions[1]){task.modelResults[n.rel]={status:'compared',changes:[],engineVersion:ENGINE_VERSION,versions,source:'本地文件字节核对',release:null,compile:'not_run',simulation:'not_run'};continue;}items.push(await this.prepare(n.rel));}
     await w.persist();if(generation!==this.generation)throw Error('MATLAB 比较准备已取消');if(!items.length){this.notify('matlab-state',{stage:'MATLAB 版本缓存有效 / 文件字节一致',current:0,total:0,active:false});return [];}
-    this.notify('matlab-state',{stage:'启动 MATLAB R2024b 批量比较',current:0,total:items.length,active:true});
+    this.notify('matlab-state',{stage:'启动所选 MATLAB 批量比较',current:0,total:items.length,active:true});
     const commands=items.map((it,i)=>`fprintf('EM_FILE %d/%d %s\\n',${i+1},${items.length},${quoteM(it.rel)});\ntry\na=${quoteM(it.files[0])};b=${quoteM(it.files[1])};\n${/\.mat$/i.test(it.rel)?'v=em_compare_mat(a,b);':/\.m$/i.test(it.rel)?`v=em_compare_script(a,b,fullfile(pwd,'report-${i}'));`:/\.(mdl|slx)$/i.test(it.rel)?'v=acw_compare(a,b,false);':"v=struct('status','failed','error','后台结构接口尚未接入，请使用官方窗口');"}\ncatch err,v=struct('status','failed','error',getReport(err,'extended','hyperlinks','off'));end\nv.scope=${quoteM(it.rel)};v.release=version('-release');items{end+1}=v;\nfid=fopen(fullfile(pwd,'item-${i}.json'),'w','n','UTF-8');if fid>0,fprintf(fid,'%s',jsonencode(v));fclose(fid);end`).join('\n');
-    const completed=new Set(),apply=async(result,metadata)=>{if(w.task!==task)throw Error('任务已切换，未应用旧 MATLAB 结果');const it=items.find(it=>it.rel===result.scope);if(!it||completed.has(it.rel))return;const now=await this.versions(it.rel);if(JSON.stringify(now)!==JSON.stringify(it.versions)){completed.add(it.rel);return;}const enriched=await supplementModelResult(result);task.modelResults[it.rel]={...enriched,engineVersion:ENGINE_VERSION,versions:it.versions,source:this.source(it.rel),evidence:metadata.evidence,release:result.release||'2024b',compile:'not_run',simulation:'not_run'};await w.persist();completed.add(it.rel);this.notify('matlab-file-result',{rel:it.rel,completed:completed.size,total:items.length});};
+    const completed=new Set(),apply=async(result,metadata)=>{if(w.task!==task)throw Error('任务已切换，未应用旧 MATLAB 结果');const it=items.find(it=>it.rel===result.scope);if(!it||completed.has(it.rel))return;const now=await this.versions(it.rel);if(JSON.stringify(now)!==JSON.stringify(it.versions)){completed.add(it.rel);return;}const enriched=await supplementModelResult(result);task.modelResults[it.rel]={...enriched,engineVersion:ENGINE_VERSION,versions:it.versions,source:this.source(it.rel),evidence:metadata.evidence,release:result.release||null,compile:'not_run',simulation:'not_run'};await w.persist();completed.add(it.rel);this.notify('matlab-file-result',{rel:it.rel,completed:completed.size,total:items.length});};
     const raw=await this.run(`items={};\n${commands}\nr=struct('status','compared','items',{items});`,{onPartial:apply,timeoutMs:Math.min(1800000,Math.max(300000,items.length*60000))});
     const results=Array.isArray(raw.items)?raw.items:raw.items?[raw.items]:[];for(const [i,it]of items.entries())await apply(results[i]||{scope:it.rel,status:'failed',error:raw.error||'MATLAB 未返回该文件结果'},{evidence:raw.evidence});
     this.notify('matlab-state',{stage:'MATLAB 独立比较完成',current:items.length,total:items.length,active:false});return results;

@@ -1,0 +1,114 @@
+EmbedMerge 当前窗口外部调用
+
+本功能直接使用正在运行的 EmbedMerge 窗口和同一个 Workspace。
+原有文件树、工程配置、SmartConfig、Monaco 代码页和 Codex 面板保留。
+默认创建独立副本；本接口只发起比较和读取/定位结果，不开放保存、修改或删除文件。
+
+启动 app/release/EmbedMerge/EmbedMerge.exe 后，在 app 目录调用：
+node scripts/control.mjs status
+node scripts/control.mjs compare --input request.json --output result.json
+
+request.json 示例：
+{"ref":"F:/SVN_vscode_project/matlab_compare/example2/ref","test":"F:/SVN_vscode_project/matlab_compare/example2/test","name":"example2 工程比较"}
+
+compare 返回 task.id、counts 和 csplus.pairs。
+同一任务的其他请求必须带 taskId，且必须来自当前窗口，不能复用旧任务编号。
+参数可写入 UTF-8 JSON 文件，避免 Windows 命令行引号歧义。
+
+操作及参数：
+status：读取后台状态。lastAcknowledgedView 是最近一次窗口回执，不代表用户后来手动切页的位置。
+compare：{ref,test,name?,scopePaths?}，由原界面创建任务并显示文件树。
+differences：{taskId,pathContains?,offset?,limit?}，分页返回文件差异和读取失败。
+configuration：{taskId,ref,test}，返回原有 CS+ 比较模块的结构化结果，包括 modules/rows/versions。
+diff：{taskId,path,offset?,limit?}，返回代码差异块、文本和 hunkId。
+open：{taskId,path,hunkId?}，打开代码并定位指定差异块。
+open：{taskId,path,ref?,test?,moduleId?,fieldKey?,versions?}，打开配置页面并定位指定模块/属性。
+open 中 raw:true 可打开配置原文。配置修改不在此外部接口中提供。
+folder：{taskId}，回到原有文件树。
+
+流程：status → compare → configuration 或 diff → open。
+示例工程配置文件名不同，请使用 compare 返回的 csplus.pairs 对应关系，不自行猜配。
+configuration 返回的 versions 可原样传给 open，防止配置变化后定位到过期的模块。
+open 只有收到窗口完成渲染的回执才返回 opened:true；比较成功也必须有窗口回执。
+本地原始代码或草稿读取失败会明确返回，不作为一致。
+
+使用保护：
+当前窗口正在处理 Codex/MATLAB/文件任务或有未保存草稿时，外部请求会拒绝，不自动丢弃或保存内容。
+在检查期，操作期间其他保存和任务切换会被阻止；外部接口不更改全局 Codex 配置。
+默认不自动启动 MATLAB；模型页面继续使用软件原有手动入口。
+本接口仅监听 127.0.0.1，使用进程随机令牌，拒绝带 Origin 的浏览器请求。
+data/external-control.json 含令牌，仅用于本机连接，不要复制到报告、仓库或外部服务。
+EMBEDMERGE_CONTROL_DATA 可指定其他实例的数据目录；默认连接原安装目录 release/EmbedMerge/data。
+
+验证：
+node --test --test-isolation=none tests/*.test.mjs
+node scripts/external-control-ui-test.mjs
+设置 EMBEDMERGE_EXE 为 release/EmbedMerge/EmbedMerge.exe 后可运行同一窗口联动测试。
+原有 scripts/csplus-ui-test.mjs、scripts/ui-test.mjs --packaged 也已回归。
+
+比较结果属于静态文件/配置证据。未据此执行或证明项目编译、仿真及硬件行为。
+
+0.7.1：异步任务与当前上下文
+
+建议 Codex 先调用 context，确认当前任务、页面和选区。追问当前结果无需重新 compare。
+首次比较用 start，立即返回任务编号，随后用 job 读取阶段和结果。
+start 参数：{operation:"compare",args:{ref:"左目录",test:"右目录",name:"任务名称"},requestKey:"本次唯一编号"}
+job 参数：{jobId:"start 返回的 id"}。status 为 queued/running/completed/failed/cancelled。
+cancel 参数：{jobId:"任务编号"}。请求停止后继续查询 job，只有 cancelled 才表示已停止；来不及停止的任务仍返回 completed。
+同一进程内保留最近 32 个任务；相同 requestKey 和相同参数不会重复创建任务，不同参数复用同一 key 会拒绝。
+进度是软件实际阶段与计数，不是整体百分比或时间保证。
+CLI 可用 start --input request.json --wait --output result.json；受理和阶段写 stderr，最终结果写 stdout/文件。
+不加 --wait 会立即返回任务编号，适合语音先回应、随后继续读取结果。
+
+context 参数可为空；可带 taskId 校验任务。它读取当前窗口，不依赖最后一次外部 open。
+返回任务、页面、配置模块、当前代码选区、草稿/版本状态和 brief。
+selection.text 最多 8000 字符；truncated 表示已截断。unsynced/externalChanged 时不能把选区当成已保存版本。
+读取上下文不自动丢弃或保存草稿，不触发模型请求，也不会把窗口强行置前。
+有未完成对话框时拒绝自动切页/比较，context 会说明当前对话框。
+
+brief 参数：{taskId} 读取任务要点。
+保存参数：{taskId,expectedRevision:0,patch:{objective:"目标",constraints:["约束"],decisions:["已确认决定"]}}。
+更新必须提供刚读取的 revision；不会覆盖另一个入口刚保存的修改。
+窗口顶部“任务要点”可查看和编辑。要点随任务保存，内嵌 Codex 每轮也会读取。
+要点是任务数据，不能代替本轮修改授权；原有 write 开关和后端检查保持有效。
+resume 参数：{taskId}，在原窗口恢复已有任务和要点。也可作为 start 的 operation。
+恢复的是已有工作副本；不会声称原始工程未变化，也不代替重新比较原始目录。
+以上保存的是必要任务上下文，不是两个入口自动共享整段聊天历史。
+
+
+0.11.0：AI 审核与工作台解耦（替代旧 0.8 的内部执行方式）
+
+当前 AI 负责加载技能、检查技能版本、应用规则、按需计算和生成报告。EmbedMerge 不读取技能目录、不查技能更新、不运行技能脚本、不发起审核模型轮次。界面仅创建等待 AI 处理的请求，可“复制给 AI”，不会暗中创建另一段聊天。
+参考资料可选，任意文件或目录路径作为输入交给 AI；软件不提取资料文字。基础范围不检查硬件系数，资料缺失不阻断独立默认规则。原位高亮、点击详情、拟修订预览、撤销、备份后写回原文件继续由工作台提供。
+
+review 接口（始终带当前 taskId）：
+prepare {target,side:'test',scope:'basic',requirementsPath:''}：返回 awaiting-ai/sessionId/sourceVersion/reportSchema，不代表审核完成。
+evidence {sessionId,action:'read',rel?,start?,count?}：只读当前缓冲区，返回原文、version；search 必须给 query，默认范围为目标，count 限制结果。没有 replace、运行或执行入口。
+submit {sessionId,executor:{name:'Codex',skill:{id:'ccspt-code-review',version:'AI实际使用版本'}},report}：校验候选；技能信息由 AI 声明，软件不读安装文件核验。未使用技能时 skill:null。
+complete {sessionId}：重验源版本、定位和相关证据，保存结构化报告和通用 HTML，更新单页高亮。未提交有效报告不能完成。候选、聊天、请求成功均不算正式结果。
+cancel {sessionId}：取消未完成请求，不发布候选。
+targets/findings/open 保留原有含义；run 仅为查询/创建待处理请求的兼容别名，不调用 AI。
+可使用 core/review-client.mjs 的 reviewWorkflow({taskId,sessionId,dataRoot}) 适配器，方法 prepare/read/search/submit/complete/cancel；调用方独立拥有技能执行环境。
+
+读取预算80次/200000返回JSON字符；提交独立最多五次、报告400000字符。读预算耗尽仍可修正并提交报告，写清未检查内容。请求30分钟有效，任务切换、源码变化或重启后重新 prepare。异步 job.status=completed 仅表示请求命令结束；awaiting-ai 不是审核完成。结果仍写入任务 skillReviews 和 artifacts/review-*。软件不需要访问 .codex/skills。
+
+0.9.0：共享聊天与单栏问题块
+
+chat 指令始终带 taskId；command 支持 bind(threadId)、status、sync(cursor 可选)、probe、unbind。
+绑定先 thread/read，再实际测试 thread/resume。当前桌面聊天有 active writer 时，保留同一 ID 只读同步，不创建新线程、不 fork、不启动 turn。官方 proxy 本机不可用，未尝试绕过写入锁。
+共享视图只显示同一聊天的用户/助手消息，不复制工具输出或推理内容；按分页读取已保存历史，自动同步不会调用模型，当前生成内容可能在保存后显示。
+绑定后禁止软件独立 agentAsk；外部 AI 审核传输 prepare/evidence/submit/complete 可继续使用，不启动新推理；编辑器内的问题块可复制到同一桌面 Codex 聊天继续提问。当前并非两个界面同时可发送的双写模式。
+验证续接即使成功也会立即释放探测连接，默认仍保持单写入，不自动接管桌面聊天。解除绑定后保留原软件独立聊天记录。
+单工程审核默认单栏；“查看修改对比”可切回对比。普通双工程比较页面保持不变。
+审核意见支持多位置锚点，所有受影响原文着色。点击参数或导航条目后在原文下方出现行内卡片，随源码滚动，显示当前原文、拟修改内容、预览采纳及问题块提问。
+没有明确补丁会说明原因并禁用采纳，不猜工程参数。右侧导航默认跟随当前文件，可取消过滤查看全部意见。
+context 返回 reviewFinding，即当前所选问题块的 ID、位置、原文、依据、建议与状态；切到其他文件或无关选区时不携带旧问题块。
+
+
+0.11.1：恢复自动开始和可见进度
+
+界面“开始 AI 审核”默认自动连接本机 Codex，通过原生 skill 输入加载技能，执行并自动提交、发布报告。未登录、技能未发现、工具错误和取消均显示真实状态；不要求复制或发送给 AI。工作台不代读技能，规则由独立 AI 运行时处理，工程只读取证。外部 AI 可直接 prepare/evidence/submit/complete；已在当前聊天执行时不再启动第二轮。也可 review {taskId,command:'start',target,side:'test',scope:'basic'} 启动独立运行时，status.task.reviewRequest.runner 查询阶段、状态与用时，review cancel(sessionId) 停止。绑定桌面聊天时启动独立运行时须明确 allowIndependent:true。
+
+基础范围只读目标参数文件与适用规则，不主动读关联代码、宏、调用链、派生区、生成代码或硬件系数。不额外要求立项单或计算脚本，能独立判定的先审核，额外依据不足的写明未检查。演示按 voice_control/DEMO_GUIDE.md 第0节；AI 直接加载工程并调用 skill，无需人工点击或交接。
+
+参数审核工程加载：review-project {root,target?,createCopy?}。createCopy 默认 false：直接使用原目录，保存前备份，不创建工程副本。显式 true 保留独立副本模式。界面“打开工程审核”提供同名复选框，默认不勾选。两种模式均不会自动开始 AI 审核或硬件操作。

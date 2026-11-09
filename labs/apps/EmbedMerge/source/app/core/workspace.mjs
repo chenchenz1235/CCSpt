@@ -78,17 +78,20 @@ export class Workspace {
       }catch(e){Object.assign(this,previous);throw e;}
     });
   }
+  async createReviewProject(root,{createCopy=false}={}){
+    return this.create({ref:root,test:root},'参数审核 · '+path.basename(root),{createCopy:createCopy===true,reviewProject:true,autoMatlab:false,fileFilters:{artifacts:false}});
+  }
   async create(roots,name='工程比较',options={}) {
     return this.exclusive(async()=>{
       this.cancelled=false;
       const direct=options.createCopy===false;
       if(direct)for(const p of Object.values(roots))await guarded(path.resolve(p),'__embedmerge_path_check__');
       const real={ref:await fs.realpath(roots.ref),test:await fs.realpath(roots.test)};
-      if(direct&&(inside(real.ref,real.test)||inside(real.test,real.ref)))throw Error('直接修改模式中，两侧工程不能相同或互相包含');
+      if(direct&&!(options.reviewProject===true&&real.ref===real.test)&&(inside(real.ref,real.test)||inside(real.test,real.ref)))throw Error('直接修改模式中，两侧工程不能相同或互相包含');
       for(const root of Object.values(real)){if(!(await fs.stat(root)).isDirectory())throw Error('请选择目录');if(inside(root,this.dataRoot)||inside(this.dataRoot,root))throw Error('原始工程与应用任务数据目录不能包含彼此');}
       const previous=this.task;const previousBuffers=this.buffers;
       const scopePaths=options.scopePaths?.map(p=>String(p).replaceAll('\\','/'));if(scopePaths?.some(p=>!p||path.isAbsolute(p)||p.split('/').some(s=>!s||s==='.'||s==='..'||s.includes(':'))))throw Error('无效的样本范围');
-      this.task={id:randomUUID(),name,mode:direct?'direct-project':'project-copy',created:new Date().toISOString(),roots:real,fileFilters:normalizeFileFilters(options.fileFilters),scopePaths,autoMatlab:options.autoMatlab!==false,originals:{},copyErrors:[],directories:[],records:{},chat:[],modelResults:{},drafts:{},validation:{compile:'未执行',simulation:'未执行'}};
+      this.task={id:randomUUID(),name,mode:direct?'direct-project':'project-copy',reviewProject:options.reviewProject===true,created:new Date().toISOString(),roots:real,fileFilters:normalizeFileFilters(options.fileFilters),scopePaths,autoMatlab:options.autoMatlab!==false,originals:{},copyErrors:[],directories:[],records:{},chat:[],modelResults:{},drafts:{},validation:{compile:'未执行',simulation:'未执行'}};
       this.taskRoot=path.join(this.dataRoot,'tasks',this.task.id);this.buffers=new Map();
       try {
         if(!direct)await this.copyOriginals();
@@ -123,10 +126,17 @@ export class Workspace {
   root(side){if(!this.task||!['ref','test'].includes(side))throw Error('任务或侧无效');return this.task.mode==='direct-files'?path.dirname(this.task.files[side]):this.task.mode==='direct-project'?this.task.roots[side]:path.join(this.taskRoot,'work',side);}
   async persist(){if(!this.task)return;this.task.drafts=Object.fromEntries([...this.buffers].filter(([,b])=>b.dirty));const file=path.join(this.taskRoot,'task.json'),value=structuredClone(this.task);this.persistQueue=(this.persistQueue||Promise.resolve()).catch(()=>{}).then(()=>atomicJSON(file,value));return this.persistQueue;}
   async file(side,rel){const p=this.task?.mode==='direct-files'?await this.directPath(side,rel):await guarded(this.root(side),rel),bytes=await exists(p);return {p,bytes,version:bytes===null?null:hash(bytes)};}
-  async scan(){
-    if(!this.task)throw Error('尚未创建任务');const scanTask=this.task;this.cancelled=false;const entries=new Map(),scanFiltered={total:0,reasons:{}};
+  async scan({rel:onlyRel}={}){
+    if(!this.task)throw Error('尚未创建任务');
+    if(onlyRel&&!this.inventory?.some(n=>n.rel===onlyRel&&n.kind==='file'))throw Error('请选择已比较的文件');
+    const scanTask=this.task;this.cancelled=false;const entries=new Map(onlyRel?structuredClone(this.inventory).filter(n=>n.rel!==onlyRel).map(n=>[n.rel,n]):[]),scanFiltered=onlyRel?structuredClone(this.scanFiltered||{total:0,reasons:{}}):{total:0,reasons:{}};
     const entry=rel=>{if(!entries.has(rel))entries.set(rel,{rel,kind:'file',ref:null,test:null,status:'pending'});return entries.get(rel);};
     for(const side of ['ref','test']){
+      if(onlyRel&&!this.task.files){
+        const n=entry(onlyRel);
+        try{const f=await this.file(side,onlyRel);if(f.bytes!==null){const st=await fs.stat(f.p);if(!st.isFile())throw Error('所选文件已变为目录');n[side]={kind:'file',size:f.bytes.length,mtime:st.mtime.toISOString()};}}catch(e){n.status='error';n.error=side+': '+e.message;}
+        continue;
+      }
       if(this.task.files){
         const n=entry(this.task.fileRel);n.names=Object.fromEntries(Object.entries(this.task.files).map(([s,p])=>[s,path.basename(p)]));
         try{const f=await this.file(side,this.task.fileRel);if(f.bytes!==null){const st=await fs.stat(f.p);n[side]={kind:'file',size:f.bytes.length,mtime:st.mtime.toISOString()};}}catch(e){n.status='error';n.error=side+': '+e.message;}
@@ -140,8 +150,9 @@ export class Workspace {
         }
       };await walk(this.root(side));
     }
-    for(const e of this.task.copyErrors){if(excludedReason(e.rel,false,this.task.fileFilters))continue;const n=entry(e.rel);n.status='error';n.error=`${e.side}: ${e.error}`;}
+    for(const e of this.task.copyErrors){if(onlyRel&&e.rel!==onlyRel)continue;if(excludedReason(e.rel,false,this.task.fileFilters))continue;const n=entry(e.rel);n.status='error';n.error=`${e.side}: ${e.error}`;}
     for(const n of entries.values()){
+      if(onlyRel&&n.rel!==onlyRel)continue;
       if(n.status==='error'||n.kind==='dir')continue;
       if(/\.m$/i.test(n.rel)){n.matlab=true;n.nativeScript=true;}
       try{
@@ -173,10 +184,10 @@ export class Workspace {
       n.counts={};for(const c of children){for(const[k,v]of Object.entries(c.counts||{[c.status]:1}))n.counts[k]=(n.counts[k]||0)+v;}
       if(n.status!=='error')n.status=children.reduce((s,c)=>(priority[c.status]>priority[s]?c.status:s),'same');
     }
-    if(this.task!==scanTask)throw Error('任务已切换，旧扫描结果已丢弃');this.inventory=[...entries.values()].sort((a,b)=>a.rel.localeCompare(b.rel,'en'));
+    if(this.task!==scanTask)throw Error('任务已切换，旧扫描结果已丢弃');this.inventory=[...entries.values()].sort((a,b)=>a.rel.localeCompare(b.rel,'en'));this.scanFiltered=scanFiltered;
     const csplus=await this.csplusSnapshot();
     if(this.task!==scanTask)throw Error('任务已切换，旧扫描结果已丢弃');
-    return {task:{id:this.task.id,name:this.task.name,mode:this.task.mode||'project-copy',files:this.task.files,fileRel:this.task.fileRel,history:this.historyInfo(),backupRoot:path.join(this.taskRoot,'backups'),roots:this.task.roots,created:this.task.created,work:{ref:this.root('ref'),test:this.root('test')},chat:this.task.chat,records:this.task.records,fileFilters:this.task.fileFilters,filtered:this.task.filtered||scanFiltered,scopePaths:this.task.scopePaths,validation:this.task.validation,autoMatlab:this.task.autoMatlab!==false,modelResults:this.task.modelResults},entries:this.inventory,csplus};
+    return {task:{id:this.task.id,name:this.task.name,mode:this.task.mode||'project-copy',files:this.task.files,fileRel:this.task.fileRel,history:this.historyInfo(),backupRoot:path.join(this.taskRoot,'backups'),roots:this.task.roots,created:this.task.created,work:{ref:this.root('ref'),test:this.root('test')},chat:this.task.chat,records:this.task.records,externalBrief:this.task.externalBrief||null,reviewProject:!!this.task.reviewProject,sharedChat:this.task.sharedChat||null,fileFilters:this.task.fileFilters,filtered:this.task.filtered||scanFiltered,scopePaths:this.task.scopePaths,validation:this.task.validation,autoMatlab:this.task.autoMatlab!==false,modelResults:this.task.modelResults},entries:this.inventory,csplus};
   }
   async csplusInput(side,rel){
     if(!rel)return null;
@@ -226,6 +237,21 @@ export class Workspace {
     const b={side,rel,text,baseText:text,baseHash:f.version,meta,baseMeta:{...meta},revision:0,dirty:false,missing:f.bytes===null,source:readSource?.source||'native-fs',cached:!!readSource,readAt:readSource?.readAt||new Date().toISOString()};
     this.buffers.set(key,b);return structuredClone(b);
   }
+  async fileVersions(taskId,rel=this.task?.fileRel){
+    if(this.task?.id!==taskId)throw Error('文件任务已切换');if(!this.inventory?.some(n=>n.rel===rel&&n.kind==='file'))throw Error('请选择已比较的文件');
+    const versions={};for(const side of ['ref','test'])versions[side]=(await this.file(side,rel)).version;
+    if(this.task?.id!==taskId)throw Error('文件任务已切换');return versions;
+  }
+  async refreshFiles({taskId,versions,rel=this.task?.fileRel}){return this.exclusive(async()=>{
+    const current=await this.fileVersions(taskId,rel);
+    if(['ref','test'].some(side=>this.buffers.get(side+':'+rel)?.dirty))return {blocked:true};
+    if(['ref','test'].some(side=>current[side]!==versions[side]))throw Error('文件仍在更新，稍后自动重试');
+    // Decode both sides first so a read failure never discards a cached buffer.
+    for(const side of ['ref','test']){const f=await this.file(side,rel);if(f.version!==current[side])throw Error('文件仍在更新');if(f.bytes!==null){if(f.bytes.length>MAX_TEXT)throw Error('超过文本大小上限');decode(f.bytes);}}
+    const previous=new Map(this.buffers);
+    try{for(const side of ['ref','test'])this.buffers.delete(side+':'+rel);const pair=await this.pair(rel),snapshot=await this.scan({rel});await this.persist();return {pair,snapshot};}
+    catch(e){this.buffers=previous;throw e;}
+  });}
   async pair(rel){const ref=await this.open('ref',rel),test=await this.open('test',rel);return {ref,test,hunks:hunks(ref.text,test.text),records:this.task.records};}
   async fileCopyInfo(rel,source){
     if(!['ref','test'].includes(source))throw Error('复制来源必须是 ref/test');
@@ -243,6 +269,7 @@ export class Workspace {
     return {...info,...result,status:'copied',backup:result.backup?path.join(this.taskRoot,result.backup):null};
   }
   async update({side,rel,text,revision,eol},aiOwner=null,authorize=()=>true){
+    if(this.task?.reviewProject&&side==='ref')throw Error(this.task.mode==='direct-project'?'审核左侧只读，请在右侧当前参数中编辑':'审核原始快照只读，请在 test 修改副本中编辑');
     if(this.locked)throw Error('保存/创建操作进行中，编辑仍在界面保留，请稍后保存');
     if(typeof text!=='string'||Buffer.byteLength(text)>MAX_TEXT)throw Error('缓冲区超过大小上限');
     const b=await this.open(side,rel);if(!authorize())throw Error('本轮已停止，未修改');if(b.revision!==revision)throw Error('缓冲区版本冲突，请重新加载');
@@ -282,11 +309,11 @@ export class Workspace {
     else if(action==='read'){const b=await this.open(side,rel);if(b.externalChanged)throw Error('磁盘内容已外部变更，请用户先重新加载，禁止使用过期依据');const start=Math.max(1,Number(args.start)||1),count=Math.min(300,Math.max(1,Number(args.count)||120));result={side,path:rel,version:hash(b.text),revision:b.revision,dirty:b.dirty,source:b.source,cached:true,start,lines:b.text.split('\n').slice(start-1,start-1+count).map((text,i)=>({line:start+i,text}))};}
     else if(action==='search'){
       if(typeof query!=='string'||!query||query.length>200)throw Error('请提供 1-200 字符的字面搜索词');result=[];
-      const candidates=this.inventory.filter(n=>n.kind==='file'&&n[side]&&!models.test(n.rel)),skipped=[];let scanned=0;
+      const scope=rel?String(rel).replaceAll('\\','/').replace(/\/$/,''):null;if(scope&&(scope.startsWith('/')||scope.split('/').includes('..')||scope.includes(':')))throw Error('搜索范围必须是工程内相对路径');const limit=Math.min(60,Math.max(1,Number(args.count)||60));const candidates=this.inventory.filter(n=>n.kind==='file'&&n[side]&&!models.test(n.rel)&&(!scope||n.rel===scope||n.rel.startsWith(scope+'/'))),skipped=[];if(scope&&!this.inventory.some(n=>n[side]&&(n.rel===scope||n.rel.startsWith(scope+'/'))))throw Error('搜索范围不在当前工程中');let scanned=0,limited=false;
       for(const n of candidates.slice(0,2000)){
-        try{const b=await this.open(side,n.rel);if(b.externalChanged)throw Error('外部变化，禁止搜索过期缓冲区');scanned++;for(const [i,line]of b.text.split('\n').entries()){if(line.includes(query))result.push({side,path:n.rel,line:i+1,text:line.slice(0,1000),version:hash(b.text)});if(result.length>=60)break;}}catch(e){if(skipped.length<20)skipped.push({path:n.rel,error:e.message});}if(result.length>=60)break;
+        try{const b=await this.open(side,n.rel);if(b.externalChanged)throw Error('外部变化，禁止搜索过期缓冲区');scanned++;for(const [i,line]of b.text.split('\n').entries()){if(line.includes(query))result.push({side,path:n.rel,line:i+1,text:line.slice(0,1000),version:hash(b.text)});if(result.length>=limit){limited=true;break;}}}catch(e){if(skipped.length<20)skipped.push({path:n.rel,error:e.message});}if(result.length>=limit){limited=true;break;}
       }
-      result={matches:result,skipped,scanned,partial:skipped.length>0||scanned<candidates.length};
+      result={matches:result,skipped,scanned,scope:scope||null,limit,partial:limited||skipped.length>0||scanned<candidates.length};
     }else if(action==='replace'){
       if(!budget.write)throw Error('本轮只读，不允许修改');if(typeof args.before!=='string'||!args.before||typeof args.after!=='string')throw Error('修改必须提供非空精确 before 与 after');
       budget.writeId??=randomUUID();const b=await this.open(side,rel);if(b.externalChanged)throw Error('工作副本存在外部冲突，请用户先处理');if(b.dirty&&b.aiOwner!==budget.writeId)throw Error('目标有用户/之前轮次未保存内容，请用户先保存或处理');if(args.version!==hash(b.text))throw Error('修改依据版本已过期，请重新读取');if(b.text.split(args.before).length!==2)throw Error('before 必须唯一匹配');

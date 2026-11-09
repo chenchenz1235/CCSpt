@@ -1,0 +1,88 @@
+EmbedMerge 0.11.5 打包与 AI 接入
+
+推荐分发命令（app 目录）：npm run package:zip
+输出 release/EmbedMerge-0.11.5-windows-x64.zip。
+ZIP 只收录本次 PACKAGE_MANIFEST.json 中经过 SHA-256 验证的文件。
+不会收录 data、历史任务、缓存、外部控制令牌或安装目录中的遗留文件。
+打包会保留本机 release/EmbedMerge/data，不要把使用过的安装文件夹整体压缩分发。
+程序会在自己的 data 目录积累任务，使用后的目录大小不等于软件分发大小。
+默认不附带 firmware-runtime 下的私有固件配置。固件功能可用
+EMBEDMERGE_FIRMWARE_RUNTIME 指定已配置好的工具目录；内部专用包可显式设置
+EMBEDMERGE_INCLUDE_FIRMWARE=1 后打包。对外发布前需确认私有文件可以分发。
+程序不捆绑 MATLAB、Codex 或 Claude Code，继续使用本机已安装的工具。
+发行包未压缩体积默认限制 600 MiB，超出则打包失败。
+
+Claude Code
+1. 安装官方 Claude Code CLI，在终端运行 claude 完成登录与已有服务配置。
+2. 打开右侧 AI 面板，在“AI”列表选择“Claude Code”，点击“连接本机 CLI”。
+3. 选中文件或差异后提问。沿用 CLI 当前账号/服务配置，不复制凭据。
+4. 通过当前任务的取证工具读取文件，支持精确版本的缓冲区修改、预算、停止。
+   比较工具修改仍需本轮授权并进入草稿；原生工具按默认权限规则和软件内确认执行，可直接写当前工作目录。
+5. 每轮以当前任务最近二十四条聊天恢复上下文，不接管其他 Claude 会话。
+6. 绑定 Codex 桌面共享聊天时仍阻止独立发送；回原桌面聊天继续。
+7. 软件内“独立技能审核”仍使用原来的 Codex 原生技能运行时。
+   Claude Code 兼容比较问答和审核请求创建，尚未移植独立技能审核或桌面共享会话。
+
+官方协议参考
+https://code.claude.com/docs/en/headless
+https://code.claude.com/docs/en/cli-reference
+
+MATLAB 与 AI 设置（0.11.5）
+顶部始终显示“MATLAB 设置”；设置菜单与模型页也有入口。
+未打开工程、未自动找到 MATLAB 时，仍能手工输入或浏览 matlab.exe。
+点击自动查找可读取本机常见安装目录、PATH 和 MathWorks 注册表；不会启动 MATLAB。
+不按 MATLAB 年份设置白名单；保存位置为程序旁 data/matlab-settings.json，对所有工程生效。
+需要临时手工调整时，可关闭程序后编辑这个文件，例如：
+{"path":"D:/MATLAB/R2024b/bin/matlab.exe"}
+路径必须指向本机已安装的 matlab.exe；未安装时不能仅靠填写路径启用。
+
+软件内 Codex / Claude Code 可使用 application_settings 列出、打开及填入设置。
+包括比较路径、MATLAB 路径、AI 选项、过滤项、审核工程与参考资料路径、固件表单及布局。
+可说“帮我查找并配置 MATLAB R2024b”或“把右侧路径填为 D:/customer/new.c”。
+MATLAB configure 会校验并保存路径；普通 fill 只填界面，apply 则按用户请求应用或启动。
+填写本身不执行后续操作；用户明确要求 apply 后才应用或开始比较。
+尚未打开工程也可用 AI 配置软件；需在本机安装并登录所选 AI CLI。
+此版本已通过模拟工具调用和实际界面回归，未代替接收方 MATLAB 许可证与模型运行验证。
+
+0.11.5 常规操作与能力修复
+1. 文件树单击选中、双击展开/折叠目录；箭头和键盘也可操作。
+2. 顶部“开始比较”可主动打开路径输入；加载或修改路径不会自动比较。
+3. 无效路径不能误选旧目录；增加系统目录/文件选择入口；资源管理器打开失败有明确提示。
+4. 关闭文件、返回文件夹、只读 AI 问答不全目录重扫；保存和审阅标记只更新当前文件。
+5. 手动重新比较会重读当前干净文本；有草稿时保留并提示，避免覆盖。
+6. MATLAB 不再只允许 R2024b，R2024a 等版本可配置；安装元数据用于选择启动参数和 COM 版本。
+   未知版本也允许配置；实际操作依赖所需函数、工具箱、许可证，失败会如实显示。
+7. Codex 面板不再额外禁用本机原生工具、技能与已配置 MCP；保留项目沙箱和 on-request 确认，支持本次/会话许可与补充问题。
+   不等同于保证所有桌面 Codex 专有插件均可用，具体能力取决于本机 CLI、账号、安装配置和运行策略。
+8. 问答默认取证预算改为200次/2000000字符/60分钟，可调并随本机应用设置保存；推理默认沿用本机 Codex。
+   参数审核取证预算改为400次/4000000字符/60分钟，仍按所选审核范围取证，不自动修改工程。
+9. 原生 Codex 文件工具按当前工作目录操作，可直接修改文件；比较工具的 replace 仍为草稿，需要保存。
+   自动备份适用于编辑器保存和软件内文件操作，不应据此认为原生命令的写入都有软件备份。
+10. 可说“帮我配置 MATLAB”“打开 params.c 第二行”“填好两侧路径并开始比较”。
+    apply 涉及切换任务时排在当前回答结束后执行；queued 表示已排队，不表示操作已经完成。
+
+验证边界
+常规操作用真实打包 EXE 的鼠标/键盘流程测试，并记录真实 scan/createComparison 调用。
+AI 端到端验证使用确定性本地模型协议模拟器，真实经过 Codex 适配层、IPC 和界面；没有调用真实模型推理。
+MATLAB 多版本配置、启动参数、COM 连接路由已模拟；未在每个版本/每个工具箱上运行实际模型比较。
+依据：OpenAI Codex App Server https://developers.openai.com/codex/app-server
+MATLAB COM 接口 https://www.mathworks.com/help/matlab/matlab_external/matlab-com-automation-server-interface.html
+
+0.11.5 Claude Code 能力补齐
+- 旧版本仅额外提供了设置接口，仍通过 --tools 空列表禁用了原生工具，且 dontAsk 无法显示权限提示。
+- 本版移除空工具列表和 strict-mcp-config，不再只加载 user 设置，也不再替换 Claude Code 默认系统提示。
+- 原生 Read/Write/Edit、命令、技能以及本机已配置 MCP 保持可用，实际可用性服从本机 CLI、模型、工具安装和管理策略。
+- 使用默认权限检查，通过官方 --permission-prompt-tool 将待确认操作送到软件内。允许仅返回原始输入；拒绝或停止不会执行。
+- 不启用 dangerously-skip-permissions，也不修改用户的全局权限配置。
+- 需要用户补充问题时可使用应用 ask_user，答案经本地认证 MCP 返回。
+- 软件专用参数审核按钮仍是 Codex 审核运行时；这与 Claude 普通问答中的原生工具权限是两个独立集成。
+- Claude 原生文件操作同 Codex 一样不等于编辑器草稿保存，软件自动备份不覆盖所有原生命令的写入。
+- 长问题上限同步放宽为60000字符，AI推理强度的“沿用本机配置”同时适用于两种提供方。
+
+Claude 验证记录
+- 允许、拒绝、停止后迟到授权、补充问题、任务切换保护等自动测试通过。
+- 脚本模拟 CLI 驱动真实 EXE：R2024a 路径保存、权限确认、隔离测试文件写入、最新代码显示、页面切换均通过。
+- 真实已安装 CLI 2.1.293 在隔离非交互测试中退出码0却无输出、未请求本地模拟模型接口；单独调用也复现。
+  因此真实 CLI + 模型的端到端文件操作尚未验证通过，不能把模拟测试当作真实账号环境验证。
+- 官方接口依据：https://code.claude.com/docs/en/cli-reference
+  权限规则：https://code.claude.com/docs/en/permissions

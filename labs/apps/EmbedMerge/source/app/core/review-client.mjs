@@ -1,0 +1,3 @@
+import {callEmbedMerge} from './external-client.mjs';
+// AI-side adapter: skill loading, updates and calculation remain in the AI environment.
+export function reviewWorkflow({taskId,sessionId,dataRoot}={}){const call=(command,args={})=>callEmbedMerge('review',{...args,taskId,sessionId,command},dataRoot);return {prepare:args=>call('prepare',args),start:args=>call('start',args),status:()=>callEmbedMerge('status',{},dataRoot),read:args=>call('evidence',{...args,action:'read'}),search:args=>call('evidence',{...args,action:'search'}),submit:args=>call('submit',args),complete:()=>call('complete'),cancel:()=>call('cancel')};}

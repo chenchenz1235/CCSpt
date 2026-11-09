@@ -1,6 +1,6 @@
 {
   "name": "embedmerge",
-  "version": "0.7.0",
+  "version": "0.11.5",
   "private": true,
   "description": "Motor control archive comparison workbench",
   "type": "module",
@@ -11,7 +11,8 @@
     "dev": "vite build && electron .",
     "test": "node --test tests/*.test.mjs",
     "package": "npm run build && node scripts/package.mjs",
-    "test:ui": "node scripts/ui-test.mjs"
+    "test:ui": "node scripts/ui-test.mjs",
+    "package:zip": "npm run package && node scripts/package-zip.mjs"
   },
   "dependencies": {
     "@xmldom/xmldom": "0.9.12",

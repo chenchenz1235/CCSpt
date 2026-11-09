@@ -78,5 +78,19 @@ export function createCsplusView({call,show,onSnapshot,onText,onError,onContextC
     if(p)await load(p);else{result=null;showPairs=true;render();}
   }
   tab.onclick=protect(()=>open());
-  return {open,context(){return selected?{files:{ref:selected.ref||null,test:selected.test||null},moduleId, module:result?.modules.find(m=>m.id===moduleId)?.title}:null;},update(cs){if(snapshot===cs)return;snapshot=cs;refreshBanner();if(!section.hidden){if(selected?.ref||selected?.test){const p=cs?.pairs.find(p=>p.id===selected.id);if(p){if(!result||p.status==='error'||JSON.stringify(p.versions)!==JSON.stringify(result.versions))load(p,true).catch(fail);}else{request++;selected=null;result=null;showPairs=true;render();}}else render();}},setActive(active){tab.classList.toggle('active',active);}};
+  async function navigate(a){
+    if(await show()===false)throw Error('配置页面未切换');
+    const candidates=(snapshot?.pairs||[]).filter(p=>a.ref||a.test?p.ref===a.ref&&p.test===a.test:p.ref===a.path||p.test===a.path);
+    if(candidates.length!==1)throw Error('配置文件配对不唯一，请指定 ref/test');
+    await load(candidates[0]);if(!result)throw Error('配置结果读取失败，请查看页面提示');
+    if(a.versions&&JSON.stringify(a.versions)!==JSON.stringify(result.versions))throw Error('配置版本已变化，请重新比较');
+    const m=a.moduleId?result.modules.find(m=>m.id===a.moduleId):result.modules.find(m=>['changed','mode','added','removed'].includes(m.status))||result.modules[0];
+    if(!m)throw Error('配置模块不存在');
+    const row=a.fieldKey?m.rows.find(r=>r.key===a.fieldKey):null;if(a.fieldKey&&!row)throw Error('配置项不存在');
+    moduleId=m.id;mode=m.mode||'';layout='properties';allChanged=false;showPairs=false;
+    if(row){advanced=!!row.advanced;inactive=!!row.inactive;}render();
+    if(row){const button=[...section.querySelectorAll('[data-proof]')].find(b=>b.dataset.proof===row.key),tr=button?.closest('tr');if(tr){tr.style.outline='2px solid #3879db';tr.scrollIntoView({block:'center'});}}
+    return {pairId:candidates[0].id,moduleId:m.id,module:m.title,fieldKey:row?.key||null};
+  }
+  return {open,navigate,context(){return selected?{files:{ref:selected.ref||null,test:selected.test||null},moduleId, module:result?.modules.find(m=>m.id===moduleId)?.title}:null;},update(cs){if(snapshot===cs)return;snapshot=cs;refreshBanner();if(!section.hidden){if(selected?.ref||selected?.test){const p=cs?.pairs.find(p=>p.id===selected.id);if(p){if(!result||p.status==='error'||JSON.stringify(p.versions)!==JSON.stringify(result.versions))load(p,true).catch(fail);}else{request++;selected=null;result=null;showPairs=true;render();}}else render();}},setActive(active){tab.classList.toggle('active',active);}};
 }

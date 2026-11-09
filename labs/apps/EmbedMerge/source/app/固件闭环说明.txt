@@ -1,0 +1,95 @@
+# Python 固件加密、Boot 更新与电机控制原型
+
+从原有软件 AESHelper、MotUtil、BootLoaderCommHelperNew、CommHelper 移植协议。原 MFC 软件保留不动；Python 包为 `firmware_tool`。旧 C# 试做目录 `FirmwareTool` 不作为交付入口。
+
+## 运行与集成
+
+- 升级入口：`dist/Bootloader/Bootloader.exe`。
+- 加密入口：`dist/DevMngRegister/DevMngRegister.exe`。
+- 两个目录需连同 `_internal` 一起保留；无参数打开桌面界面，有参数使用 JSONL 命令行。
+- Python 集成可安装本项目或直接导入包；导入本身不连接硬件。
+- 依赖为 cryptography、pyserial；`build_python.ps1` 使用本地 .venv 和 PyInstaller 打包。
+- 保留公司授权的进程名，文件访问权限以实测为准。日志不输出密钥。
+
+```python
+from firmware_tool import encrypt_file, Image, load_file, Bootloader, SerialLink, Settings
+result = encrypt_file("project/DefaultBuild/only_app/app.mot", "output/app.em")
+# Host may supply an explicit CryptoProfile rather than load the legacy source profile.
+```
+
+## 命令行
+
+```powershell
+.\dist\Bootloader\Bootloader.exe artifact --project '工程路径\工程.mtpj'
+.\dist\DevMngRegister\DevMngRegister.exe inspect --file '工程路径\DefaultBuild\only_app\工程.mot'
+.\dist\DevMngRegister\DevMngRegister.exe encrypt --file '工程路径\DefaultBuild\only_app\工程.mot' --out '新文件.em'
+.\dist\Bootloader\Bootloader.exe inspect --file '新文件.em'
+.\dist\Bootloader\Bootloader.exe simulate --file '新文件.em'
+.\dist\Bootloader\Bootloader.exe discover
+```
+
+`discover` 枚举串口，从 9600/N 开始，发送原软件 F0/01 连接握手、F0/03 拓扑读取；App 不应答则查询只读 Boot 信息。默认候选波特率 9600、19200、38400、57600、115200、4800，校验 N/E/O，可显式指定列表。候选列表是本工具的扫描策略，不代表原软件会遍历全部组合。探测不进入 Boot、不擦除、不运行电机。
+
+`flash` 必须提供 .em、串口、App/Boot 波特率、升级路径、产品 ID、文件 SHA-256。默认仅返回计划，加入 `--execute` 才操作硬件；可选 `--already-boot`。EmbedMerge 默认 Boot 9600/N，失败时以只读 Boot 信息查询确定 UART 配置。支持直连驱动、直连接口、经接口转发到驱动，一次更新一个目标。默认保留数据区；`--erase-data` 对应原软件四个 FF 擦除标记。
+
+仅生成 .em，支持 bootloader_lite；遇到 bootloader_en 拒绝擦除。.etm 生成流程尚未建立，不能仅改扩展名。旧格式为固定配置 AES-256-CBC/PKCS7，为兼容保留，没有新增签名或鉴权能力。
+
+`motor --action stop|speed|run` 复用 F4/05、F4/06+D1+小端 float32、F4/04，可选 `--forward` 添加 AB/01。默认仅出计划；设转速和运行需提供 rpm、max-rpm，运行还需 0–60 秒的明确时长。结束、取消或 START 应答丢失时尝试停止；串口断开时不能保证停机，应答不证明实际转速。
+
+## CS+ 与 Boot 产物
+
+`build --project 工程.mtpj` 输出计划；`--execute --log 日志.txt` 执行 `CubeSuite+.exe /br DefaultBuild /lang en-US 工程.mtpj`，检查退出码及 only_app 中唯一 MOT 的更新时间。命令行依据：[Renesas 官方文档](https://tool-support.renesas.com/autoupdate/support/onlinehelp/csp/V8.14.00/CS%2B.chm/po-ProjectOperation.chm/Output/po_function_command-nav-2.html)。
+
+**只有 DefaultBuild/only_app 下的 MOT 用于 Boot 更新。** 不使用 DefaultBuild 根目录完整 MOT。构建时间检查阻止沿用未更新输出；编译成功不等于参数正确或实物验证通过。
+
+## EmbedMerge 演示闭环
+
+新增“固件与电机”面板，后台接入现有本机鉴权外部控制接口。手机到 PC/Codex 的连接沿用已有控制方式；本次不开放公网服务。
+
+运行 `start_demo.ps1` 可打开已打包的 EmbedMerge，并使用独立 `demo-data` 进入原生单页参数审核，加载错误工程的参数文件；审核结论需由技能实际运行生成，不能用左右差异代替。原始基准在 `example/driver/project`，注入版在 `example/demo-driver/project`：`speed_min` 从 300 改为 2500，`speed_max` 保持 2400。可在代码高亮处点击展开问题详情、编辑拟修订，保存时选择写回原文件或仅保存副本；写回前自动备份并检测外部冲突。
+
+此演示通过外部比较的 `forBuild:true` 选项保留编译所需的二进制输入（例如工程原有 bootloader BIN），避免普通比较过滤器漏复制依赖。其他普通比较默认规则不变。
+
+1. 用“打开工程审核”或 AI 的 review-project 入口加载工程，默认单页显示参数代码；复用 ccspt-code-review，定位高亮问题，点击展开详情，编辑后保存并可写回原文件。
+2. 项目资料可选：不提供时直接按默认规则检测；可选择任意文件或工程目录，不以文件扩展名或立项关键字阻止审核。无法提取资料时记录限制并继续默认规则，仅对依赖缺失依据的条目标注待核实。
+3. 当前 TEST 工作副本选择 mtpj，查看计划，再执行 CS+ 编译。
+4. 查找 only_app MOT，检查、加密为任务产物目录下的新 .em，记录路径和哈希。
+5. 探测设备，核对连接、ID 和文件哈希，查看升级计划后执行。擦除前检查版本、ID、全部数据地址范围；CRC 通过后才设置有效标志。
+6. 使用已确认的 App 串口参数，填写演示转速、上限和时长，运行并定时停止。
+
+```javascript
+import {callEmbedMerge} from 'F:/SVN_vscode_project/EmbedMerge/app/core/external-client.mjs';
+const s = await callEmbedMerge('status');
+const job = await callEmbedMerge('firmware', {taskId:s.task.id, operation:'discover'});
+const state = await callEmbedMerge('firmware', {taskId:s.task.id, operation:'job', jobId:job.id});
+```
+
+调用演示窗口前设置 `EMBEDMERGE_CONTROL_DATA=F:\SVN_vscode_project\voice_control\demo-data`；否则默认客户端会查找原发布目录的数据，不一定是此演示窗口。
+
+操作为后台任务，状态可查询、事件同步界面、完整 JSONL 日志写入任务 artifacts/firmware。取消通过协作文件传递，不强制杀死刷写或运行电机的进程；CS+ 构建需等待原生进程结束。
+
+## 验证边界
+
+测试覆盖 S1/S2/S3、错误校验与重叠、AES 已知向量、文件往返、分片串口应答、写入 CRC、范围/ID/版本失败时禁止擦除、CRC 失败时禁止有效标志、旧/新握手、转发升级、取消、START 应答丢失后的停止尝试。
+
+提供的 only_app MOT 与原 .em 明文哈希不同，不能当作配对文件。新生成 artifacts/example-python.em 与当前 MOT 的明文 SHA-256 一致，模拟升级通过。真实编译、板卡更新、电机运行及完整手机语音演示以最终验证记录为准；模拟结果不代表实物通过。
+
+固件初版验证：Python 19 项通过；EmbedMerge 当时98项通过、1项因文件系统不支持硬链接而跳过；独立窗口验证加密与模拟升级通过。未注入错误的基准副本已由真实 CS+ 重建成功（0 错误、15 警告），only_app MOT 更新后加密及模拟升级通过。没有枚举到串口，未刷写真实板卡或运行电机。详见 `artifacts/verification.json`、`artifacts/compile-check/csplus.log` 和 `artifacts/demo-speed-review.html`。
+
+## 2026-11-02 修复版
+
+本地软件 0.10.1，审核 skill 0.2.1。参考资料可选，任意文件和工程目录都能提交；无内容或无法读取时继续默认规则。只在远端语义版本更高时提示更新。新建比较空路径、只填一侧或路径无效时均可取消。参数审核恢复原生单页入口，保留代码高亮、点击展开、编辑与备份后写回原文件。
+
+本批验证：EmbedMerge 106项通过、1项文件系统能力限制跳过；版本脚本3项通过；取消/资料输入窗口测试及单页高亮/保存原文件窗口测试通过。实物编译、刷写和电机未在本次软件修复中执行。
+
+
+## 2026-11-02 审核解耦版
+
+EmbedMerge 0.11.0，本地技能 0.3.0。技能加载、更新检查、规则与计算由当前 AI 负责；软件只管理审核请求、当前缓冲区只读证据、报告校验及展示。软件不再读取技能 MD/CSV 或运行技能 Python，也不另启审核 AI 轮次，因此不依赖软件进程读取技能文件的授权。界面“创建 AI 审核请求”返回等待状态，可复制给 AI；AI submit 候选后 complete 才发布。资料可选；支持基础/完整范围。旧报告、高亮、详情、修改预览与备份写回功能保留。实际手机、编译、刷写和电机闭环不属于本次验证。
+
+
+0.11.1：恢复自动开始和可见进度
+
+界面“开始 AI 审核”默认自动连接本机 Codex，通过原生 skill 输入加载技能，执行并自动提交、发布报告。未登录、技能未发现、工具错误和取消均显示真实状态；不要求复制或发送给 AI。工作台不代读技能，规则由独立 AI 运行时处理，工程只读取证。外部 AI 可直接 prepare/evidence/submit/complete；已在当前聊天执行时不再启动第二轮。也可 review {taskId,command:'start',target,side:'test',scope:'basic'} 启动独立运行时，status.task.reviewRequest.runner 查询阶段、状态与用时，review cancel(sessionId) 停止。绑定桌面聊天时启动独立运行时须明确 allowIndependent:true。
+
+基础范围只读目标参数文件与适用规则，不主动读关联代码、宏、调用链、派生区、生成代码或硬件系数。不额外要求立项单或计算脚本，能独立判定的先审核，额外依据不足的写明未检查。演示按 voice_control/DEMO_GUIDE.md 第0节；AI 直接加载工程并调用 skill，无需人工点击或交接。

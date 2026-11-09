@@ -5,7 +5,7 @@ r=struct('status','compared','source','MATLAB official visdiff + conservative sc
 em_assert_readable(left);em_assert_readable(right);
 if ~isfolder(reportFolder),mkdir(reportFolder);end
 comparison=visdiff(left,right,'text');
-r.report=char(publish(comparison,OutputFolder=reportFolder));
+r.report=char(publish(comparison,'OutputFolder',reportFolder));
 a=fileread(left);b=fileread(right);
 if strcmp(a,b),r.classification='same';r.classificationNote='MATLAB 读取文本完全一致';
 elseif strcmp(stripDisplayComments(a),stripDisplayComments(b)),r.classification='minor';r.classificationNote='仅完整普通注释行、空行或行首尾格式差异；指令注释保留';

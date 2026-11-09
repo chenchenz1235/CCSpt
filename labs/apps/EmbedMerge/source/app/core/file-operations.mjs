@@ -89,6 +89,7 @@ export const operationMethods={
     return result;
   },
   async commitOperation(label,changes){
+    if(this.task?.reviewProject&&changes.some(c=>c.side==='ref'))throw Error('审核原始快照只读，请在 test 修改副本中操作');
     if(this.task.pendingOperation)throw Error('请先撤回恢复未完成的文件操作');
     const id=randomUUID(),prepared=[];
     for(const c of changes){

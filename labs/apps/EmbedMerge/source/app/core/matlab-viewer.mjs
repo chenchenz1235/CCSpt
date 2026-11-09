@@ -1,3 +1,4 @@
+import {matlabIdentity} from './matlab-settings.mjs';
 import fs from 'node:fs/promises';import path from 'node:path';import {spawn} from 'node:child_process';import {randomUUID} from 'node:crypto';
 // A single controller retains the official, version-specific shared COM server.
 // No scripts are passed through a shell, and model paths are MATLAB-quoted.
@@ -24,6 +25,8 @@ while($null -ne ($line=[Console]::ReadLine())){
   $request=ConvertFrom-Json -InputObject $line
   if($request.action -eq 'close'){break}
   if($request.action -ne 'compare'){throw 'Unknown MATLAB viewer action'}
+  $progId=[string]$request.progId
+  if($progId -notmatch '^Matlab\.Application(?:\.\d+\.\d+)?$'){throw 'Invalid MATLAB COM identifier'}
   $reused=$true
   $reconnected=$false
   # Probe the retained handle before dispatch. Reconnect only before executing
@@ -38,7 +41,7 @@ while($null -ne ($line=[Console]::ReadLine())){
    }
   }
   if($null -eq $matlab){
-   try{$matlab=[Runtime.InteropServices.Marshal]::GetActiveObject('Matlab.Application.24.2');$null=$matlab.Execute("builtin('fprintf','');")}
+   try{$matlab=[Runtime.InteropServices.Marshal]::GetActiveObject($progId);$null=$matlab.Execute("builtin('fprintf','');")}
    catch{
     if($launchPending){throw 'MATLAB was already started but is not yet available; check its desktop before retrying. No additional MATLAB was launched.'}
     $reused=$false
@@ -53,14 +56,14 @@ while($null -ne ($line=[Console]::ReadLine())){
     while($null -eq $matlab){
      if([DateTime]::UtcNow -gt $deadline){throw 'MATLAB AutomationServer startup timed out; check MATLAB desktop, no second instance was started'}
      Start-Sleep -Milliseconds 400
-     try{$matlab=[Runtime.InteropServices.Marshal]::GetActiveObject('Matlab.Application.24.2')}catch{}
+     try{$matlab=[Runtime.InteropServices.Marshal]::GetActiveObject($progId)}catch{}
     }
     $launchPending=$false
    }
   }
   $launchPending=$false
   $matlab.Visible=1
-  $code='addpath('+ (Quote-Matlab $request.helpers) +');em_view_compare('+ (Quote-Matlab $request.left) +','+ (Quote-Matlab $request.right) +','+ (Quote-Matlab $request.output) +');'
+  $code='addpath('+ (Quote-Matlab $request.helpers) +');em_view_compare('+ (Quote-Matlab $request.left) +','+ (Quote-Matlab $request.right) +','+ (Quote-Matlab $request.output) +','+ (Quote-Matlab $request.root) +');'
   $console=$matlab.Execute($code)
   $requests++
   $reply=@{id=$request.id;ok=$true;connection=$connection;reused=$reused;reconnected=$reconnected;requests=$requests;console=[string]$console}
@@ -72,7 +75,7 @@ if($null -ne $matlab){[void][Runtime.InteropServices.Marshal]::FinalReleaseComOb
 export {bridge as matlabViewerBridge};
 export function viewerError(reply){
  const disconnected=reply.sessionFailure||/800706ba|800706be|80010108|RPC 服务器不可用|RPC server is unavailable/i.test(reply.error||'');
- const error=Error(disconnected?'MATLAB 会话连接已断开（RPC/COM），本次官方窗口请求未确认完成；文件比较结论未改变。请确认 MATLAB R2024b 已就绪，再点“显示官方比较窗口”重新连接。原始错误：'+reply.error:'MATLAB 共享比较会话错误：'+reply.error);
+ const error=Error(disconnected?'MATLAB 会话连接已断开（RPC/COM），本次官方窗口请求未确认完成；文件比较结论未改变。请确认 所选 MATLAB 已就绪，再点“显示官方比较窗口”重新连接。原始错误：'+reply.error:'MATLAB 共享比较会话错误：'+reply.error);
  error.code=disconnected?'MATLAB_SESSION_DISCONNECTED':'MATLAB_VIEWER_ERROR';return error;
 }
 export class MatlabViewerSession{
@@ -87,10 +90,10 @@ export class MatlabViewerSession{
  fail(e){for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(e);}this.pending.clear();}
  async open({left,right,helpers,taskRoot,expectedExe,isCancelled=()=>false}){
   if(this.active||this.inFlight)throw Error('MATLAB 仍在处理上一个官方比较，请等待完成；不会重复启动');this.active=true;this.cancelled=false;
-  try{const job=path.join(taskRoot,'artifacts','matlab-viewer-'+randomUUID());await fs.mkdir(job,{recursive:true});if(this.cancelled||isCancelled())throw Error('MATLAB 官方比较启动已取消');this.ensure();const output=path.join(job,'result.json'),id=++this.sequence;this.notify('matlab-state',{stage:this.started?'复用 MATLAB R2024b 官方比较会话':'连接 MATLAB R2024b 共享比较会话',current:0,total:0,active:true});
-   const response=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{this.pending.delete(id);reject(Error('MATLAB 官方比较请求超时；未重开 MATLAB，请检查已打开的窗口'));},this.timeoutMs);this.inFlight=id;this.pending.set(id,{resolve,reject,timer});this.child.stdin.write(JSON.stringify({id,action:'compare',left,right,helpers,output,exe:expectedExe})+'\n');});
+  try{const job=path.join(taskRoot,'artifacts','matlab-viewer-'+randomUUID());await fs.mkdir(job,{recursive:true});if(this.cancelled||isCancelled())throw Error('MATLAB 官方比较启动已取消');const identity=await matlabIdentity(expectedExe);if(this.currentExe&&this.currentExe.toLowerCase()!==expectedExe.toLowerCase()){this.close();this.cancelled=false;}this.currentExe=expectedExe;this.ensure();const output=path.join(job,'result.json'),id=++this.sequence;this.notify('matlab-state',{stage:this.started?'复用 所选 MATLAB 官方比较会话':'连接 所选 MATLAB 共享比较会话',current:0,total:0,active:true});
+   const response=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{this.pending.delete(id);reject(Error('MATLAB 官方比较请求超时；未重开 MATLAB，请检查已打开的窗口'));},this.timeoutMs);this.inFlight=id;this.pending.set(id,{resolve,reject,timer});this.child.stdin.write(JSON.stringify({id,action:'compare',left,right,helpers,output,exe:expectedExe,progId:identity.progId,root:path.dirname(path.dirname(expectedExe))})+'\n');});
    await fs.writeFile(path.join(job,'controller.json'),JSON.stringify(response,null,2));let result;try{result=JSON.parse((await fs.readFile(output,'utf8')).replace(/^\uFEFF/,''));}catch{throw Error('MATLAB 未返回完整官方比较结果。控制日志：'+path.join(job,'controller.json')+'；'+response.console.slice(-1500));}
-   if(expectedExe&&path.resolve(expectedExe).toLowerCase()!==path.resolve(result.matlabRoot,'bin','matlab.exe').toLowerCase())throw Error('注册的 R2024b COM 服务器与所选 MATLAB 路径不同，请核实安装注册');
+   if(expectedExe&&path.resolve(expectedExe).toLowerCase()!==path.resolve(result.matlabRoot,'bin','matlab.exe').toLowerCase())throw Error('注册的 MATLAB COM 服务器与所选 MATLAB 路径不同，请核实安装注册');
    this.started=true;return {...result,reused:response.reused,reconnected:response.reconnected,connection:response.connection,evidence:output,job};
   }finally{this.active=false;this.notify('matlab-finished',{});}
  }

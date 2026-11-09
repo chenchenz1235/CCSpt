@@ -1,0 +1,6 @@
+.comparison-path-controls{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #d8e2ed;flex-wrap:wrap;background:#f5f8fc}
+.comparison-path-controls label{display:flex;flex:1 1 300px;align-items:center;gap:7px;min-width:0;font-size:12px}
+.comparison-path-controls input{flex:1;min-width:80px;width:auto;font:12px Consolas,monospace;padding:6px}
+.comparison-path-controls button{flex-shrink:0}
+#pathCompareState{font-size:11px;color:#66788c}
+#comparisonPending{padding:50px 24px;color:#61768c;text-align:center}

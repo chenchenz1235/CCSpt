@@ -48,8 +48,15 @@ for(const name of names){const bytes=await fs.readFile(path.join(appDir,name)),p
 const hp=Pickle.createEmpty();hp.writeString(JSON.stringify(header));const hb=hp.toBuffer(),sp=Pickle.createEmpty();sp.writeUInt32(hb.length);const archive=path.join(dest,'resources/app.asar'),archiveBytes=Buffer.concat([sp.toBuffer(),hb,...chunks]);await fs.writeFile(archive,archiveBytes);asar.uncacheAll();for(const c of checks)if(digest(asar.extractFile(archive,c.name))!==c.hash)throw Error('ASAR integrity mismatch: '+c.name);
 manifest.push({path:'resources/app.asar',bytes:archiveBytes.length,sha256:digest(archiveBytes),verifiedEntries:checks.length});
 await copy(path.join(root,'matlab'),path.join(dest,'resources/helpers/matlab'));
+// Local firmware profiles are optional private assets; distribution opts in explicitly.
+if(process.env.EMBEDMERGE_INCLUDE_FIRMWARE==='1')await copy(path.join(root,'firmware-runtime'),path.join(dest,'resources/helpers/firmware'));
 for(const file of ['LICENSE','ThirdPartyNotices.txt'])await copy(path.join(root,'node_modules/monaco-editor',file),path.join(dest,'resources/licenses/monaco-editor',file));
-await copy(path.resolve(root,'../new-project-kit/fixtures'),path.join(dest,'resources/fixtures'));
-for(const name of ['使用说明.txt','THIRD_PARTY_NOTICES.txt','验收记录.txt']){try{await copy(path.join(root,name),path.join(dest,name));}catch(e){if(e.code!=='ENOENT')throw e;}}
-await fs.writeFile(path.join(dest,'PACKAGE_MANIFEST.json'),JSON.stringify({version,builtAt:new Date().toISOString(),runtime:JSON.parse(await fs.readFile(path.join(root,'node_modules/electron/package.json'),'utf8')).version,files:manifest},null,2));
+// Fixtures are already in app.asar; do not duplicate them outside it.
+for(const name of ['使用说明.txt','THIRD_PARTY_NOTICES.txt','验收记录.txt','外部控制说明.txt','固件闭环说明.txt','打包与AI接入说明.txt']){try{await copy(path.join(root,name),path.join(dest,name));}catch(e){if(e.code!=='ENOENT')throw e;}}
+// The verified archive supersedes staging; never publish both copies.
+const actualStaging=await fs.realpath(appDir);
+if(actualStaging.toLowerCase()!==path.resolve(appDir).toLowerCase()||!actualStaging.toLowerCase().startsWith(path.resolve(dest).toLowerCase()+path.sep))throw Error('Unsafe package staging cleanup');
+await fs.rm(appDir,{recursive:true,force:true});
+const releaseFiles=manifest.filter(f=>!f.path.startsWith('resources/app/'));
+await fs.writeFile(path.join(dest,'PACKAGE_MANIFEST.json'),JSON.stringify({version,builtAt:new Date().toISOString(),runtime:JSON.parse(await fs.readFile(path.join(root,'node_modules/electron/package.json'),'utf8')).version,includeFirmware:process.env.EMBEDMERGE_INCLUDE_FIRMWARE==='1',files:releaseFiles},null,2));
 console.log('Verified package: '+path.join(dest,'EmbedMerge.exe')+' ('+manifest.length+' files)');

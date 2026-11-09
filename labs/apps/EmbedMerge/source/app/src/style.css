@@ -1,4 +1,9 @@
 @import './workbench.css';
+.model-empty-state{margin:14px 0;padding:16px 18px;background:#f4f8fc;border:1px solid #d6e2ee;border-radius:6px;line-height:1.7}
+.model-empty-state p{margin:8px 0 0}
+.model-report-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.model-report-preview{border:1px solid #ccd8e6;border-radius:6px;overflow:hidden}
+.model-report-preview iframe{display:block;width:100%;height:65vh;min-height:320px;border:0;background:white}
 html,body,#app{height:100%;overflow:hidden}
 .budget input{display:block}
 #editor{overflow:hidden}

@@ -1,0 +1,17 @@
+/* The modular Monaco API does not load the codicon font stylesheet. */
+@import '../node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.css';
+
+#editorOverlays{position:fixed;inset:0;z-index:200;pointer-events:none;background:transparent}
+#editorOverlays> *{pointer-events:auto}
+/* Monaco's standalone hover service attaches hints to each diff pane rather
+   than overflowWidgetsDomNode. Fixed positioning lets its own layout place
+   them above the editor without the editor's overflow clip. */
+#editor .context-view{position:fixed!important}
+/* Keep search controls available in narrow side-by-side editors. */
+#editor .find-widget{right:6px!important;max-width:calc(100% - 12px)!important;height:auto!important;min-height:34px;padding-bottom:4px}
+#editor .find-widget>.find-part,#editor .find-widget>.replace-part{flex-wrap:wrap;gap:3px; margin-right:20px}
+#editor .find-widget .monaco-findInput{flex:1;min-width:120px;width:auto!important}
+#editor .find-widget .find-actions,#editor .find-widget .replace-actions{flex:none;margin-left:auto}
+#editor .find-widget .matchesCount{display:block!important;min-width:46px}
+#editor .find-widget.collapsed-find-widget>.find-part .monaco-findInput .controls{display:block}
+#editor .find-widget.collapsed-find-widget .button.previous,#editor .find-widget.collapsed-find-widget .button.next{display:block}

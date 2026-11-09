@@ -135,5 +135,8 @@ export function createWorkbenchLayout({onLayout=()=>{},onContext=()=>{}}={}){
   window.addEventListener('resize',()=>{finish();apply();});
   function show(visible=true){panel.hidden=!visible;$('#toggleAI').classList.toggle('active',visible);$('#toggleAI').setAttribute('aria-expanded',String(visible));if(visible){apply();onContext();}requestAnimationFrame(onLayout);}
   $('#toggleAI').onclick=()=>show(panel.hidden);$('#closeAI').onclick=()=>show(false);
-  apply();return {show,apply};
+  apply();return {show,apply,settingsFields:()=>[{key:'layout.fontSize',type:'number',value:fontSize,min:12,max:20},{key:'layout.mode',type:'select',value:mode,options:['docked','floating','maximized']},{key:'layout.dockWidth',type:'number',value:dockWidth,min:380,max:1200}],configure(values){
+    for(const [key,value]of Object.entries(values)){if(!['fontSize','mode','dockWidth'].includes(key))throw Error('未知布局设置：'+key);if(key==='mode'&&!['docked','floating','maximized'].includes(value))throw Error('未知面板模式');if(key!=='mode'&&(!Number.isFinite(value)||value<(key==='fontSize'?12:380)||value>(key==='fontSize'?20:1200)))throw Error('布局值超出范围');}
+    if(values.fontSize!==undefined)fontSize=values.fontSize;if(values.mode!==undefined)mode=values.mode;if(values.dockWidth!==undefined)dockWidth=values.dockWidth;apply();persist();
+  }};
 }
