@@ -13,13 +13,13 @@
 
 ### EmbedMerge · 嵌入式工程比较与合并
 
-把两份工程的 C/H 代码、CS+ 配置、Simulink 模型及 MAT/Bus 数据差异放在同一个工作台里核对，支持文本逐块合并，并可结合 Codex 分析改动影响。
+把两份工程的 C/H 代码、CS+ 配置、Simulink 模型及 MAT/Bus 数据差异放在同一个工作台里核对，支持文本逐块合并，并可结合 Codex / Claude Code 分析改动影响。
 
-**Windows x64 · 试用版 0.7.0**
+**Windows x64 · 试用版 0.11.5**
 
-[查看介绍与截图](labs/apps/EmbedMerge/README.md) · [三分钟体验](labs/apps/EmbedMerge/README.md#三分钟体验一次) · [下载软件](https://github.com/chenchenz1235/CCSpt/releases/tag/embedmerge-v0.7.0)
+[查看介绍与截图](labs/apps/EmbedMerge/README.md) · [三分钟体验](labs/apps/EmbedMerge/README.md#三分钟体验一次) · [下载软件](https://github.com/chenchenz1235/CCSpt/releases/tag/embedmerge-v0.11.5)
 
-首次使用建议在“新建比较”中勾选“创建独立副本”。模型与 MAT 数据比较需要本机 MATLAB R2024b；AI 辅助需要安装并登录 Codex CLI。
+首次使用建议在“新建比较”中勾选“创建独立副本”。模型与 MAT 数据比较需配置本机 MATLAB（不设年份白名单，仍依赖所需工具箱和许可证）；AI 辅助需安装并登录 Codex 或 Claude Code CLI。验证范围及已知限制见发布说明。
 
 ---
 
